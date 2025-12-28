@@ -26,11 +26,11 @@ To get started with Jarvisnet, follow these steps:
    ```bash
    pip install -r requirements.txt
    ```
-4. Download a model for openwakeword and piper-tts and place it in the `onnx/` directory.
+4. Download a model for openwakeword and piper-tts and place it in the `models/` directory.
 5. Edit these lines in `main.py` to point to your wake word model:
    ```python
-   WAKE_MODEL = "onnx/hey_jarvis_v0.1.onnx"
-   VOICE = "onnx/en_US-lessac-low.onnx"
+   WAKE_MODEL = "models/hey_jarvis_v0.1.onnx"
+   VOICE = "models/en_US-lessac-low.onnx"
    ```
 6. Run the main application:
    ```bash
