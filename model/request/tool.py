@@ -1,15 +1,19 @@
 ﻿from typing import List, Optional, Dict, Any
-from model.request.ToolParameter import ToolParameter
+from model.request.tool_param import ToolParameter
 
 class Tool:
     name: str
     description: Optional[str] = None
     params: List[ToolParameter] = []
+    available: bool = True
+    func = None
 
-    def __init__(self, name: str, description: Optional[str] = None, params: Optional[List[ToolParameter]] = None):
+    def __init__(self, name: str, description: Optional[str] = None, params: Optional[List[ToolParameter]] = None, available: bool = True, func = None):
         self.name = name
         self.description = description
         self.params = params or []
+        self.available = available
+        self.func = func
 
     def to_schema(self) -> Dict[str, Any]:
         """Convert the Tool instance to the requested function schema.
