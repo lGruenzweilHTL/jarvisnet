@@ -2,7 +2,7 @@
 import openwakeword
 
 SAMPLE_RATE = 16000
-FRAME_DURATION_MS = 30
+FRAME_DURATION_MS = 80
 FRAME_SIZE = int(SAMPLE_RATE * FRAME_DURATION_MS / 1000)
 
 
@@ -19,10 +19,10 @@ class WakeListener:
         with sd.InputStream(channels=1, samplerate=SAMPLE_RATE, dtype="int16", blocksize=FRAME_SIZE) as stream:
             while True:
                 data, _ = stream.read(FRAME_SIZE)
-                pcm = data.ravel().tolist()  # many wake libs expect list[int]
+                pcm = data.ravel()
                 try:
-                    scores = self.model.predict(pcm)
-                    score = scores[0] if scores else 0.0
+                    scores = self.model.predict(pcm).values()
+                    score = list(scores)[0] if scores and len(scores) > 0 else 0.0
                     detected = score >= self.sensitivity
                 except Exception:
                     detected = False

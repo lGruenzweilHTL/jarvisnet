@@ -13,12 +13,13 @@ WAKE_MODEL = "models/hey_jarvis_v0.1.onnx"
 VOICE = "models/de_DE-karlsson-low.onnx"
 
 def start_conversation():
-    #wake = WakeListener([WAKE_MODEL])
+    wake = WakeListener([WAKE_MODEL])
     voice = PiperVoice.load(VOICE)
     try:
         print("Listening for wake word...")
-        #wake.listen()
+        wake.listen()
         print("Wake word detected")
+        speak("Wie kann ich behilflich sein?", voice)
         while True:
             print("Recording...")
             wav = record_utterance(silence_timeout=2.0, timeout=15)
