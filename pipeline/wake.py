@@ -29,8 +29,3 @@ class WakeListener:
                 if detected:
                     return
 
-    def close(self):
-        try:
-            self.model.close()
-        except Exception:
-            pass
