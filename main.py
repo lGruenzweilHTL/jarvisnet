@@ -22,7 +22,10 @@ def start_conversation():
         speak("Wie kann ich behilflich sein?", voice)
         while True:
             print("Recording...")
-            wav = record_utterance(silence_timeout=2.0, timeout=15)
+            wav = record_utterance()
+            if not wav:
+                print("No speech detected.")
+                continue
             print("Recorded:", wav)
 
             text = transcribe(wav)
