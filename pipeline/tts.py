@@ -1,24 +1,22 @@
-﻿import subprocess
-import simpleaudio as sa
-import tempfile
-import os
+﻿import numpy as np
+import sounddevice as sd
+from piper import PiperVoice
 
-def speak(text, voice="alloy", out_path=None):
-    """
-    Call piper CLI to produce TTS and play it.
-    Adjust CLI flags for your piper install.
-    """
-    if out_path is None:
-        tf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        out_path = tf.name
-        tf.close()
 
-    cmd = ["piper", "tts", "--voice", voice, "--text", text, "--out", out_path]
-    subprocess.run(cmd, check=True)
-    wave_obj = sa.WaveObject.from_wave_file(out_path)
-    play_obj = wave_obj.play()
-    play_obj.wait_done()
-    try:
-        os.remove(out_path)
-    except Exception:
-        pass
+def speak(text: str, voice: PiperVoice):
+    """
+    Synthesize speech from text using the specified voice model.
+
+    Args:
+        text (str): The text to be synthesized.
+        voice (PiperVoice): The PiperVoice model to use for synthesis.
+    """
+    stream = sd.OutputStream(samplerate=voice.config.sample_rate, channels=1, dtype='int16')
+    stream.start()
+    for chunk in voice.synthesize(text):
+        audio_bytes = chunk.audio_int16_bytes
+        int_data = np.frombuffer(audio_bytes, dtype=np.int16)
+        stream.write(int_data)
+
+    stream.stop()
+    stream.close()

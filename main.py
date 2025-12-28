@@ -1,42 +1,42 @@
 ﻿import random
 import time
+from piper import PiperVoice
 from model.preset import Preset
 from model.request.tool import Tool
 from model.request.tool_param import ToolParameter
+from pipeline.tts import speak
 from pipeline.wake import WakeListener
 from pipeline.recorder import record_utterance
 from pipeline.stt import transcribe
-from pipeline.tts import speak
 
-WAKE_MODEL = "models/wake.onnx"  # point to your openwakeword model file
-OLLAMA_MODEL = "your-local-model"
-VOICE = "alloy"
+WAKE_MODEL = "models/hey_jarvis_v0.1.onnx"
+VOICE = "models/de_DE-karlsson-low.onnx"
 
-def main_loop():
-    wake = WakeListener(["hey_jarvis_v0.1.onnx"])
+def start_conversation():
+    #wake = WakeListener([WAKE_MODEL])
+    voice = PiperVoice.load(VOICE)
     try:
+        print("Listening for wake word...")
+        #wake.listen()
+        print("Wake word detected")
         while True:
-            print("Listening for wake word...")
-            wake.listen()
-            print("Wake word detected — recording...")
-            wav = record_utterance()
+            print("Recording...")
+            wav = record_utterance(silence_timeout=2.0, timeout=15)
             print("Recorded:", wav)
 
             text = transcribe(wav)
-            print("User:", text)
             if not text:
                 print("No speech detected.")
                 continue
+            print("User:", text)
 
             resp = sample_preset.prompt(text)
             print("Assistant:", resp)
 
-            speak(resp, voice=VOICE)
+            speak(resp, voice)
             time.sleep(0.2)
     except KeyboardInterrupt:
         print("Exiting.")
-    finally:
-        wake.close()
 
 weather_tool = Tool(
     name="get_current_weather",
@@ -53,7 +53,7 @@ weather_tool = Tool(
     ]
 )
 
-sample_preset = Preset("dummy", "llama3.2", [weather_tool], system="You are a helpful assistant.")
+sample_preset = Preset("dummy", "llama3.2", [weather_tool], system="You are a helpful assistant that speaks german. Respond only in german.")
 
 if __name__ == "__main__":
-    main_loop()
+    start_conversation()
