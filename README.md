@@ -26,13 +26,19 @@ To get started with Jarvisnet, follow these steps:
    ```bash
    pip install -r requirements.txt
    ```
-4. Download a model for openwakeword and piper-tts and place it in the `models/` directory.
-5. Edit these lines in `main.py` to point to your wake word model:
+4. Install PortAudio (required for audio input/output):
+   Ubuntu/Debian example:
+   ```
+   sudo apt-get install libportaudio2
+   ```
+5. Download a model for openwakeword and piper-tts and place it in the `models/` directory.
+6. Edit these lines in `main.py` to point to your wake word model:
    ```python
    WAKE_MODEL = "models/hey_jarvis_v0.1.onnx"
    VOICE = "models/en_US-lessac-low.onnx"
    ```
-6. Run the main application:
+   
+7. Run the main application:
    ```bash
     python main.py
     ```

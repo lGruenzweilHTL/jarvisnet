@@ -1,5 +1,8 @@
 ﻿import random
 import time
+from pathlib import Path
+
+from flask import Flask
 from piper import PiperVoice
 from model.preset import Preset
 from model.request.tool import Tool
@@ -8,6 +11,9 @@ from pipeline.tts import speak
 from pipeline.wake import WakeListener
 from pipeline.recorder import record_utterance
 from pipeline.stt import transcribe
+
+from dashboard.routes.dashboard_routes import dashboard_bp
+from dashboard.routes.instance_routes import instance_bp
 
 WAKE_MODEL = "models/hey_jarvis_v0.1.onnx"
 VOICE = "models/de_DE-karlsson-low.onnx"
@@ -60,4 +66,10 @@ weather_tool = Tool(
 sample_preset = Preset("dummy", "llama3.2", [weather_tool], system="You are a helpful assistant that speaks german. Respond only in german.")
 
 if __name__ == "__main__":
-    start_conversation()
+    base = Path(__file__).resolve().parent
+    app = Flask(__name__, root_path=str(base / "dashboard"))
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(instance_bp, url_prefix='/instance')
+    app.run(host='0.0.0.0', debug=True)
+
+    #start_conversation()

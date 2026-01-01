@@ -1,4 +1,4 @@
-from services.instance import LLMInstance
+from dashboard.services.instance import LLMInstance
 
 instance_tools = {
     'search': {

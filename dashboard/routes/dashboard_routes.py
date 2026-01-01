@@ -1,8 +1,8 @@
 from datetime import timezone, datetime, timedelta
 import random
 
-import services.instance_controller as instance_controller
-from flask import Blueprint, render_template, url_for, redirect, flash, request
+import dashboard.services.instance_controller as instance_controller
+from flask import Blueprint, render_template, url_for, redirect, request
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

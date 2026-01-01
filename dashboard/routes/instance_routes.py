@@ -1,5 +1,5 @@
 from flask import Blueprint, abort
-from services import instance_controller
+from dashboard.services import instance_controller
 
 instance_bp = Blueprint('instance', __name__)
 

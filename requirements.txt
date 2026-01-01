@@ -1,7 +1,6 @@
 ﻿ollama
 faster-whisper
 sounddevice
-simpleaudio
 openwakeword
 numpy
 webrtcvad-wheels
