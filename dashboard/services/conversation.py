@@ -18,14 +18,15 @@ def init_models(wake_model, voice_model, whisper_model, whisper_device):
     voice = PiperVoice.load(voice_model)
     whisper = WhisperModel(whisper_model, device=whisper_device)
 
-def start_conversation(preset):
+def start_conversation(preset, rounds=-1):
     global wake, voice, whisper
     try:
         print("Listening for wake word...")
         wake.listen()
         print("Wake word detected")
         speak("Wie kann ich behilflich sein?", voice)
-        while True:
+        curr_rounds = 0
+        while curr_rounds < rounds:
             print("Recording...")
             wav = record_utterance()
             if not wav:
@@ -44,5 +45,6 @@ def start_conversation(preset):
 
             speak(resp, voice)
             time.sleep(0.2)
+            curr_rounds += 1
     except KeyboardInterrupt:
         print("Exiting.")

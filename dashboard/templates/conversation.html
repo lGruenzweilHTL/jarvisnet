@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Conversation Dashboard{% endblock %}
+{% block page_title %}Conversation Details{% endblock %}
+
+{% block content %}
+<script>
+    function startConversation() {
+        rounds = document.getElementById("rounds-input").value;
+        const params = new URLSearchParams({ rounds });
+        const url = "{{ url_for('dashboard.start_conversation', project_id=project_id) }}" + "?" + params.toString();
+        fetch(url, { method: 'GET' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert("Conversation successfully");
+            } else {
+                alert("Failed to start conversation.");
+            }
+        });
+    }
+</script>
+<section  class="container">
+    <label for="rounds-input">Number of Rounds:</label>
+    <input type="number" id="rounds-input" name="rounds" value="1" min="-1">
+    <button onclick="startConversation()">Start Conversation</button>
+</section>
+{% endblock %}

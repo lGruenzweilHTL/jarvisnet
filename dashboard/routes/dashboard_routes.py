@@ -1,8 +1,11 @@
 from datetime import timezone, datetime, timedelta
 import random
+import dashboard.services.conversation as conv
 
 import dashboard.services.instance_controller as instance_controller
 from flask import Blueprint, render_template, url_for, redirect, request
+
+from dashboard.services.instance_controller import master_preset
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -54,3 +57,12 @@ def save_settings():
             f.write(f"{k}={v}\n")
 
     return redirect(url_for('dashboard.settings'))
+
+@dashboard_bp.route('/conversation')
+def conversation():
+    return render_template("conversation.html")
+
+@dashboard_bp.route('/conversation/start')
+def start_conversation():
+    rounds = request.args.get('rounds', default=-1, type=int)
+    conv.start_conversation(master_preset, rounds)
