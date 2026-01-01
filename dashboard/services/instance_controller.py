@@ -7,8 +7,9 @@ instance_tools = [
         ToolParameter('query', 'string', 'The search query', required=True),
     ], func=lambda query: f"Results for {query}", available=True),
 ]
+master_preset = Preset('master', 'llama3.2', instance_tools, '', False, False)
 instance_presets = [
-    Preset('master', 'llama3.2', instance_tools, '', False, False)
+    master_preset
 ]
 instances: dict[int, Preset] = { }
 curr_id = 0
