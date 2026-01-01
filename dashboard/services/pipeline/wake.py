@@ -11,7 +11,7 @@ class WakeListener:
     Wraps an openwakeword engine. Replace model_path / API calls to match your local engine.
     """
     def __init__(self, model_paths: list[str], sensitivity: float = 0.5):
-        self.model = openwakeword.Model(wakeword_models=model_paths)
+        self.model = openwakeword.Model(wakeword_model_paths=model_paths)
         self.sensitivity = sensitivity
 
     def listen(self):

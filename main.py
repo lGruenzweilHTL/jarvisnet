@@ -4,13 +4,13 @@ from pathlib import Path
 
 from flask import Flask
 from piper import PiperVoice
-from model.preset import Preset
-from model.request.tool import Tool
-from model.request.tool_param import ToolParameter
-from pipeline.tts import speak
-from pipeline.wake import WakeListener
-from pipeline.recorder import record_utterance
-from pipeline.stt import transcribe
+from dashboard.services.model.preset import Preset
+from dashboard.services.model.request.tool import Tool
+from dashboard.services.model.request.tool_param import ToolParameter
+from dashboard.services.pipeline.tts import speak
+from dashboard.services.pipeline.wake import WakeListener
+from dashboard.services.pipeline.recorder import record_utterance
+from dashboard.services.pipeline.stt import transcribe
 
 from dashboard.routes.dashboard_routes import dashboard_bp
 from dashboard.routes.instance_routes import instance_bp

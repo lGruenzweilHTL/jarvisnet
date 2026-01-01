@@ -1,5 +1,5 @@
 ﻿from typing import List, Optional, Dict, Any
-from model.request.tool_param import ToolParameter
+from dashboard.services.model.request.tool_param import ToolParameter
 
 class Tool:
     name: str

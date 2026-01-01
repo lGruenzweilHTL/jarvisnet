@@ -21,7 +21,7 @@ def index():
     chart_labels = [(next_hour - timedelta(hours=i)).time().isoformat('minutes') for i in reversed(range(24))]
     chart_values = [random.randint(200, 800) for _ in range(24)]
 
-    presets = instance_controller.instance_presets.keys()
+    presets = [preset.name for preset in instance_controller.instance_presets]
     running_instances = [
         { "time": "2025-11-19 10:00", "preset": "fast", "status": "running", "location": "Living Room" },
     ]

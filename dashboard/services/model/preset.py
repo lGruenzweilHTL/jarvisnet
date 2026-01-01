@@ -1,13 +1,14 @@
 ﻿from typing import Optional
-from model.request.tool import Tool
+from dashboard.services.model.request.tool import Tool
 import ollama
-from ollama import Message, ChatResponse, chat
+from ollama import Message, ChatResponse
 
 
 class Preset:
     name: str
     model: str
     tools: list[Tool] = []
+    system: Optional[str] = None
     stream: bool = False
     think: bool = False
 
@@ -17,6 +18,7 @@ class Preset:
         self.name = name
         self.model = model
         self.tools = tools or []
+        self.system = system
         self.stream = stream
         self.think = think
 
@@ -51,3 +53,6 @@ class Preset:
             self.history.append(Message(role="tool", tool_name=tool.name, content=result))
         else:
             self.history.append(Message(role="tool", tool_name=name, content=f"Tool {name} not found or unavailable."))
+
+    def __str__(self):
+        return f"Preset(name={self.name}, model={self.model}, tools={[tool.name for tool in self.tools]}, system={self.system}, stream={self.stream}, think={self.think})"
