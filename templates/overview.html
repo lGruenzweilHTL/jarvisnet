@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Project Dashboard{% endblock %}
+{% block page_title %}Project Overview{% endblock %}
+
+{% block content %}
+<section class="container">
+    <!-- Key metrics -->
+    <section class="metrics-grid">
+        {% for m in metrics %}
+        <article class="card metric">
+            <div class="metric-title">{{ m.title }}</div>
+            <div class="metric-value">{{ m.value }}</div>
+            {% set sign_class = 'positive' if (m.delta is number and m.delta > 0) else 'negative' if (m.delta is number and m.delta < 0) else '' %}
+            <div class="metric-delta {{ sign_class }}">
+            {% if m.delta is number and m.delta > 0 %}+{% endif %}{{ m.delta }}{% if m.delta is number %}%{% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+
+    <!-- Charts -->
+    <section class="charts-row">
+        <div class="card chart-large">
+            <header class="card-header">Requests (last 24h)</header>
+            <div class="card-body">
+                <canvas id="overviewChart" height="160">Chart placeholder</canvas>
+            </div>
+        </div>
+        <div class="card chart-small">
+            <header class="card-header">Configured Presets</header>
+            <div class="card-body">
+                {% for preset in presets|default([]) %}
+                <div class="metric-title">{{ preset }}</div>
+                {% else %}
+                <div class="muted">No presets configured</div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Table + Activity -->
+    <section class="content-row">
+        <div class="card table-card">
+            <header class="card-header">Active instances</header>
+            <div class="card-body">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Time</th><th>Preset</th><th>Status</th><th>Location</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for run in running_instances|default([]) %}
+                        <tr>
+                            <td>{{ run.time }}</td>
+                            <td>{{ run.preset }}</td>
+                            <td>{{ run.status }}</td>
+                            <td>{{ run.location }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="muted">No instances running</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <aside class="card activity-card">
+            <header class="card-header">Activity</header>
+            <div class="card-body">
+                <ul class="activity-list">
+                    {% for item in activity|default([]) %}
+                    <li><span class="time">{{ item.time }}</span> — <span class="event">{{ item.text }}</span></li>
+                    {% else %}
+                    <li class="muted">No recent activity</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </aside>
+    </section>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart libraries and initialization can be added here -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const labels = {{ chart_labels | tojson }};
+const values = {{ chart_values | tojson }};
+const ctx = document.getElementById('overviewChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Requests',
+      data: values,
+     borderColor: 'rgba(75, 192, 192, 1)',
+      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+      tension: 0.3,
+    }]
+  },
+  options: { responsive: true, maintainAspectRatio: false }
+});
+</script>
+{% endblock %}

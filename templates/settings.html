@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Project Dashboard{% endblock %}
+{% block page_title %}Project Settings{% endblock %}
+
+{% block content %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('prefer_streaming').checked = {{ 'true' if data.prefer_streaming else 'false' }};
+                document.getElementById('name').value = "{{ data.name }}";
+    });
+</script>
+<section class="container">
+    <form method="post" action="{{ url_for('dashboard.save_settings') }}">
+        <label for="prefer_streaming">Prefer Streaming</label>
+        <input type="checkbox" id="prefer_streaming" name="prefer_streaming">
+
+        <label for="name">Project Name</label>
+        <input type="text" id="name" name="name">
+        <button type="submit">Save</button>
+    </form>
+</section>
+{% endblock %}

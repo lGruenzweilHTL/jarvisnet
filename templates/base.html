@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>{% block title %}Dashboard{% endblock %}</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="brand">Project Dashboard</div>
+        <nav class="nav">
+            <a href="/" class="nav-item {% if request.url.endswith('/') %}active{% endif %}">Overview</a>
+            <a href="/metrics" class="nav-item {% if request.url.endswith('metrics') %}active{% endif %}">Metrics</a>
+            <a href="/logs" class="nav-item {% if request.url.endswith('logs') %}active{% endif %}">Logs</a>
+            <a href="/settings" class="nav-item {% if request.url.endswith('settings') %}active{% endif %}">Settings</a>
+        </nav>
+    </aside>
+
+    <header class="topbar">
+        <div class="topbar-left">
+            <h1 class="page-title">{% block page_title %}Overview{% endblock %}</h1>
+        </div>
+    </header>
+
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <small>© {{ current_year if current_year is defined else "" }} Project</small>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

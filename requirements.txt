@@ -6,3 +6,4 @@ openwakeword
 numpy
 webrtcvad-wheels
 piper
+flask
