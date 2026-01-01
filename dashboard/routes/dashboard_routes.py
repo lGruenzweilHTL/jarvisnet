@@ -64,5 +64,6 @@ def conversation():
 
 @dashboard_bp.route('/conversation/start')
 def start_conversation():
-    rounds = request.args.get('rounds', default=-1, type=int)
+    rounds = request.args.get('rounds', default=999, type=int)
     conv.start_conversation(master_preset, rounds)
+    return redirect(url_for('dashboard.conversation'))

@@ -18,7 +18,7 @@ def init_models(wake_model, voice_model, whisper_model, whisper_device):
     voice = PiperVoice.load(voice_model)
     whisper = WhisperModel(whisper_model, device=whisper_device)
 
-def start_conversation(preset, rounds=-1):
+def start_conversation(preset, rounds=999):
     global wake, voice, whisper
     try:
         print("Listening for wake word...")
@@ -28,19 +28,20 @@ def start_conversation(preset, rounds=-1):
         curr_rounds = 0
         while curr_rounds < rounds:
             print("Recording...")
-            wav = record_utterance()
+            wav = record_utterance(silence_timeout=1.5)
             if not wav:
                 print("No speech detected.")
                 continue
             print("Recorded:", wav)
 
-            text = transcribe(wav, whisper)
+            text, lang_info = transcribe(wav, whisper)
             if not text:
                 print("No speech detected.")
                 continue
-            print("User:", text)
+            print(f"User: {text} ({lang_info[0]}, {lang_info[1]:.2f})")
 
-            resp = preset.prompt(text)
+            lang_text = f"Detected language with code {lang_info[0]}. Please respond in the same language."
+            resp = preset.prompt(text + "\n" + lang_text)
             print("Assistant:", resp)
 
             speak(resp, voice)

@@ -8,7 +8,8 @@
     function startConversation() {
         rounds = document.getElementById("rounds-input").value;
         const params = new URLSearchParams({ rounds });
-        const url = "{{ url_for('dashboard.start_conversation', project_id=project_id) }}" + "?" + params.toString();
+        const url = "{{ url_for('dashboard.start_conversation') }}?" + params.toString();
+        console.log(url);
         fetch(url, { method: 'GET' })
         .then(response => response.json())
         .then(data => {

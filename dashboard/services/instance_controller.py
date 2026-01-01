@@ -7,7 +7,9 @@ instance_tools = [
         ToolParameter('query', 'string', 'The search query', required=True),
     ], func=lambda query: f"Results for {query}", available=True),
 ]
-master_preset = Preset('master', 'llama3.2', instance_tools, '', False, False)
+master_preset = Preset('master', 'llama3.2', [],
+                       'You are a conversational AI chat bot meant to fulfill user request and hold conversations',
+                       False, False)
 instance_presets = [
     master_preset
 ]

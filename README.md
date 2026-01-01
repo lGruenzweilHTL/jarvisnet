@@ -21,7 +21,7 @@ To get started with Jarvisnet, follow these steps:
    ```bash
    git clone https://github.com/lGruenzweilHTL/jarvisnet.git
    ```
-2. Navigate to the project directory:
+2. Navigate to the project directory
 3. Install the required dependencies:
    ```bash
    pip install -r requirements.txt
@@ -46,5 +46,5 @@ To get started with Jarvisnet, follow these steps:
 
 ## Usage
 
-Once the application is running, the Master agent will listen for the wake word. Upon activation, it can delegate tasks to the appropriate agents based on the user's requests.
-
+When started, the application will display the url of the dashboard. Navigate to this url, visit the conversation tab and start a conversation.
+Once started, the master agent will listen for the wake word.
