@@ -1,5 +1,7 @@
 ﻿from pathlib import Path
 from flask import Flask
+
+from dashboard.repository.sqlite.db import create_tables, test_connection
 from dashboard.services.conversation import init_models
 from dashboard.routes.dashboard_routes import dashboard_bp
 from dashboard.routes.instance_routes import instance_bp
@@ -10,6 +12,10 @@ WHISPER_MODEL = "small"
 WHISPER_DEVICE = "cpu"
 
 if __name__ == "__main__":
+    create_tables()
+    connected = test_connection()
+    print(f"Database connected: {connected}")
+
     init_models(WAKE_MODEL, VOICE, WHISPER_MODEL, WHISPER_DEVICE)
 
     base = Path(__file__).resolve().parent
