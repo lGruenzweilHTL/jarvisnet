@@ -1,7 +1,7 @@
-from dashboard.repository.sqlite.db import load_all_shared_data, test_connection
-from dashboard.services.model.preset import Preset
-from dashboard.services.model.request.tool import Tool
-from dashboard.services.model.request.tool_param import ToolParameter
+from old.dashboard.repository.sqlite.db import load_all_shared_data, test_connection
+from old.dashboard.services.model.preset import Preset
+from old.dashboard.services.model.request.tool import Tool
+from old.dashboard.services.model.request.tool_param import ToolParameter
 
 instance_tools = [
     Tool('search_web', 'Search the web for information', [

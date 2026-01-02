@@ -3,10 +3,10 @@ import time
 from faster_whisper import WhisperModel
 from piper import PiperVoice
 
-from dashboard.services.pipeline.recorder import record_utterance
-from dashboard.services.pipeline.stt import transcribe
-from dashboard.services.pipeline.tts import speak
-from dashboard.services.pipeline.wake import WakeListener
+from old.dashboard.services.pipeline.recorder import record_utterance
+from old.dashboard.services.pipeline.stt import transcribe
+from old.dashboard.services.pipeline.tts import speak
+from old.dashboard.services.pipeline.wake import WakeListener
 
 wake: WakeListener | None = None
 voice: PiperVoice | None = None

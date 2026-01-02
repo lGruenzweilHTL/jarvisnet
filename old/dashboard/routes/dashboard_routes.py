@@ -1,11 +1,11 @@
 from datetime import timezone, datetime, timedelta
 import random
-import dashboard.services.conversation as conv
+import old.dashboard.services.conversation as conv
 
-import dashboard.services.instance_controller as instance_controller
+import old.dashboard.services.instance_controller as instance_controller
 from flask import Blueprint, render_template, url_for, redirect, request
 
-from dashboard.services.instance_controller import master_preset
+from old.dashboard.services.instance_controller import master_preset
 
 dashboard_bp = Blueprint('dashboard', __name__)
 

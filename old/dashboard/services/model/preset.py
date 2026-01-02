@@ -1,5 +1,5 @@
 ﻿from typing import Optional
-from dashboard.services.model.request.tool import Tool
+from old.dashboard.services.model.request.tool import Tool
 import ollama
 from ollama import Message, ChatResponse
 

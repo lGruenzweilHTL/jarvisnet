@@ -1,0 +1,22 @@
+﻿Assistant.Core
+ ├─ Voice
+ │   ├─ SatelliteManager
+ │   ├─ AudioSession
+ │   └─ WakeEvents
+ ├─ Routing
+ │   ├─ IntentRouter
+ │   └─ SpecialtyProfiles
+ ├─ Tools
+ │   ├─ ToolAttribute
+ │   ├─ ToolRegistry
+ │   └─ ToolExecutor
+ ├─ Models
+ │   ├─ PythonWorkerClient
+ │   └─ ModelProfiles
+ ├─ HomeAssistant
+ │   └─ HaClient
+ ├─ Events
+ │   ├─ EventBus
+ │   └─ EventStore
+ └─ Dashboard
+     └─ ApiControllers
