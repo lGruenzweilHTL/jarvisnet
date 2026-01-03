@@ -14,8 +14,13 @@ public class SatelliteConnection
     private readonly WebSocket _socket;
     
     public SatelliteState State { get; private set; }
+    public bool IsConnected => State != SatelliteState.Disconnected;
+    public bool AcceptingAudio => State == SatelliteState.SessionActive && _session != null;
+    public bool HasActiveSession =>
+        State is SatelliteState.SessionActive or SatelliteState.Processing or SatelliteState.Playback
+        && _session != null;
     private SatelliteHello? _info;
-    private SatelliteSessionStart? _session;
+    private SatelliteSession? _session;
     
     public SatelliteConnection(string connectionId, WebSocket socket)
     {
@@ -44,7 +49,7 @@ public class SatelliteConnection
                     await HandleTextMessageAsync(buffer, token);
                     break;
                 case WebSocketMessageType.Binary:
-                    await HandleByteMessageAsync(buffer, result.Count, token);
+                    HandleByteMessageAsync(buffer, result.Count);
                     break;
                 default:
                     throw new ArgumentException("Unsupported WebSocket message type");
@@ -52,10 +57,10 @@ public class SatelliteConnection
         }
     }
 
-    private async Task HandleByteMessageAsync(byte[] buf, int count, CancellationToken token)
+    private void HandleByteMessageAsync(byte[] buf, int count)
     {
-        if (State != SatelliteState.SessionActive) return; // Can't accept audio if no session is active
-        // TODO: Handle incoming audio frames
+        if (!AcceptingAudio) return;
+        _session.AppendAudio(buf, count);
     }
 
     private async Task HandleTextMessageAsync(byte[] buf, CancellationToken token)
@@ -74,6 +79,8 @@ public class SatelliteConnection
         switch (messageType.GetString())
         {
             case "hello":
+                if (IsConnected) return;
+                
                 _info = JsonSerializer.Deserialize<SatelliteHello>(raw, deserializeOpts);
                 if (_info == null) return;
                 State = SatelliteState.Connected;
@@ -86,8 +93,11 @@ public class SatelliteConnection
                 await SendMessageAsync(helloAck, token);
                 break;
             case "session.start":
-                _session = JsonSerializer.Deserialize<SatelliteSessionStart>(raw, deserializeOpts);
-                if (_session == null) return;
+                if (State != SatelliteState.Connected) return;
+                
+                var sessionStart = JsonSerializer.Deserialize<SatelliteSessionStart>(raw, deserializeOpts);
+                if (sessionStart == null) return;
+                _session = new SatelliteSession(sessionStart);
                 State = SatelliteState.SessionActive;
                 var sessionAck = new SatelliteSessionAck
                 {
@@ -97,15 +107,20 @@ public class SatelliteConnection
                 await SendMessageAsync(sessionAck, token);
                 break;
             case "audio.end":
+                if (!AcceptingAudio) return;
+                
                 var audioEnd = JsonSerializer.Deserialize<SatelliteAudioEnd>(raw, deserializeOpts);
                 if (audioEnd == null) return;
                 State = SatelliteState.Processing;
-                // TEMP: Terminate session before audio frames. TODO: audio frame processing
-                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Session complete", token);
+                // TODO: do stt, routing, llm, tts, then send tts data
+                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Not implemented", token);
                 break;
             case "session.abort":
+                if (!HasActiveSession) return;
+                
                 var sessionAbort = JsonSerializer.Deserialize<SatelliteSessionAbort>(raw, deserializeOpts);
                 if (sessionAbort == null) return;
+                _session = null;
                 State = SatelliteState.Connected;
                 break;
         }
@@ -124,9 +139,20 @@ public class SatelliteConnection
         };
         await SendMessageAsync(ttsStart, token);
         State = SatelliteState.Playback;
-        
-        // Stream audio in chunks
-        throw new NotImplementedException();
+
+        int frameSize = GetAudioFrameSize();
+        if (frameSize <= 0)
+        {
+            await SendErrorAsync("invalid_audio_format", "Unsupported audio format: " + _info.AudioFormat.Encoding,
+                token);
+            return;
+        }
+        for (int offset = 0; offset < ttsData.Length; offset += frameSize)
+        {
+            int chunkSize = Math.Min(frameSize, ttsData.Length - offset);
+            await _socket.SendAsync(new ArraySegment<byte>(ttsData, offset, chunkSize), 
+                WebSocketMessageType.Binary, true, token);
+        }
 
         var ttsEnd = new SatelliteTtsEnd
         {
@@ -168,5 +194,20 @@ public class SatelliteConnection
         var json = JsonSerializer.Serialize(message, message.GetType()); // Use GetType to preserve runtime type
         var buffer = Encoding.UTF8.GetBytes(json);
         await _socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, token);
+    }
+
+    private int GetAudioFrameSize()
+    {
+        if (_info == null) return 0;
+        if (_info.AudioFormat.Encoding != "pcm_s16le")
+            throw new NotSupportedException("Only pcm_s16le encoding is supported");
+        
+        // TODO: support more audio formats, parse dynamically
+        int bytesPerSample = 2; // 16 bits
+        int channels = _info.AudioFormat.Channels;
+        int sampleRate = _info.AudioFormat.SampleRate;
+        int frameDurationMs = _info.AudioFormat.FrameMs;
+
+        return (sampleRate * bytesPerSample * channels * frameDurationMs) / 1000;
     }
 }
