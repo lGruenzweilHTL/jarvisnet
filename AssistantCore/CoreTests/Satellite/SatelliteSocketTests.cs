@@ -1,12 +1,9 @@
 ﻿using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace CoreTests.Satellite;
 
-public class SatelliteSocketTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class SatelliteSocketTests(TestAssistantApp factory)
+    : IClassFixture<TestAssistantApp>
 {
     private const string HelloMessage =
         "{\n  \"type\": \"hello\",\n  \"protocol_version\": 1,\n  \"mic_id\": \"kitchen_satellite\",\n  \"area\": \"kitchen\",\n  \"language\": \"en-US\",\n  \"capabilities\": {\n    \"speaker\": true,\n    \"display\": false,\n    \"supports_barge_in\": true,\n    \"supports_streaming_tts\": true\n  },\n  \"audio_format\": {\n    \"encoding\": \"pcm_s16le\",\n    \"sample_rate\": 16000,\n    \"channels\": 1,\n    \"frame_ms\": 20\n  }\n}";
@@ -20,135 +17,80 @@ public class SatelliteSocketTests(WebApplicationFactory<Program> factory)
     private const int AudioFrameSizeBytes = 640; // 20ms of PCM 16kHz mono audio with 16-bit samples (values from HelloMessage)
     
     [Fact]
-    public async Task Satellite_SendHello_ReceiveAck()
+    public async Task Hello_ProducesHelloAck()
     {
-        var client = factory.Server.CreateWebSocketClient();
+        await using var client = await SatelliteTestClient.ConnectAsync(factory);
 
-        using var socket = await client.ConnectAsync(
-            new Uri("ws://localhost/ws/satellite"),
-            CancellationToken.None);
-        
-        var message = Encoding.UTF8.GetBytes(HelloMessage);
+        await client.SendJsonAsync(SatelliteProtocol.Hello);
 
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
-
-        Assert.Equal(WebSocketState.Open, socket.State);
-
-        var buffer = new byte[1024];
-        var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        var response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        var json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out var messageType));
-        Assert.Equal("hello.ack", messageType.GetString());
+        var msg = await client.ReceiveJsonAsync();
+        Assert.Equal("hello.ack", msg.RootElement.GetProperty("type").GetString());
     }
 
     [Fact]
-    public async Task Satellite_StartSession_ReceiveAck()
+    public async Task SessionStart_ProducesSessionAck()
     {
-        var client = factory.Server.CreateWebSocketClient();
+        await using var client = await SatelliteTestClient.ConnectAsync(factory);
 
-        using var socket = await client.ConnectAsync(
-            new Uri("ws://localhost/ws/satellite"),
-            CancellationToken.None);
+        await client.SendJsonAsync(SatelliteProtocol.Hello);
+        await client.ReceiveJsonAsync();
 
-        var message = Encoding.UTF8.GetBytes(HelloMessage);
+        await client.SendJsonAsync(SatelliteProtocol.SessionStart);
 
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
-
-        Assert.Equal(WebSocketState.Open, socket.State);
-
-        var buffer = new byte[1024];
-        var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        var response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        var json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out var messageType));
-        Assert.Equal("hello.ack", messageType.GetString());
-        
-        message = Encoding.UTF8.GetBytes(SessionStartMessage);
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
-
-        Assert.Equal(WebSocketState.Open, socket.State);
-        
-        buffer = new byte[1024];
-        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out messageType));
-        Assert.Equal("session.ack", messageType.GetString());
+        var msg = await client.ReceiveJsonAsync();
+        Assert.Equal("session.ack", msg.RootElement.GetProperty("type").GetString());
     }
 
     [Fact]
-    public async Task Satellite_SendAudioFrames_ReceiveTtsStart()
+    public async Task AudioEnd_TriggersTtsStart()
     {
-        var client = factory.Server.CreateWebSocketClient();
+        await using var client = await SatelliteTestClient.ConnectAsync(factory);
 
-        using var socket = await client.ConnectAsync(
-            new Uri("ws://localhost/ws/satellite"),
-            CancellationToken.None);
+        await client.SendJsonAsync(SatelliteProtocol.Hello);
+        await client.ReceiveJsonAsync();
 
-        var message = Encoding.UTF8.GetBytes(HelloMessage);
+        await client.SendJsonAsync(SatelliteProtocol.SessionStart);
+        await client.ReceiveJsonAsync();
 
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
+        await client.SendRandomAudioAsync(
+            SatelliteProtocol.AudioFrameSize, 50);
 
-        Assert.Equal(WebSocketState.Open, socket.State);
+        await client.SendJsonAsync(SatelliteProtocol.AudioEnd);
 
-        var buffer = new byte[1024];
-        var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        var response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        var json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out var messageType));
-        Assert.Equal("hello.ack", messageType.GetString());
-        
-        message = Encoding.UTF8.GetBytes(SessionStartMessage);
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
+        var msg = await client.ReceiveJsonAsync();
+        Assert.Equal("tts.start", msg.RootElement.GetProperty("type").GetString());
+    }
+    
+    [Fact]
+    public async Task FullLoop_EmitsAudioAndTtsEnd()
+    {
+        await using var client = await SatelliteTestClient.ConnectAsync(factory);
 
-        Assert.Equal(WebSocketState.Open, socket.State);
-        
-        result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-        response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out messageType));
-        Assert.Equal("session.ack", messageType.GetString());
+        await client.SendJsonAsync(SatelliteProtocol.Hello);
+        await client.ReceiveJsonAsync();
 
-        // Send random dummy audio
-        var audioBuffer = new byte[AudioFrameSizeBytes];
-        for (int i = 0; i < 50; i++) // Send 1 second of audio
+        await client.SendJsonAsync(SatelliteProtocol.SessionStart);
+        await client.ReceiveJsonAsync();
+
+        await client.SendRandomAudioAsync(
+            SatelliteProtocol.AudioFrameSize, 50);
+
+        await client.SendJsonAsync(SatelliteProtocol.AudioEnd);
+
+        var start = await client.ReceiveJsonAsync();
+        Assert.Equal("tts.start", start.RootElement.GetProperty("type").GetString());
+
+        var buffer = new byte[SatelliteProtocol.AudioFrameSize];
+
+        for (int i = 0; i < SatelliteProtocol.TtsFrames; i++)
         {
-            Random.Shared.NextBytes(audioBuffer);
-            await socket.SendAsync(audioBuffer, WebSocketMessageType.Binary, true, CancellationToken.None);
+            var result = await client.ReceiveBinaryAsync(buffer);
+
+            Assert.Equal(WebSocketMessageType.Binary, result.MessageType);
+            Assert.Equal(SatelliteProtocol.AudioFrameSize, result.Count);
         }
 
-        message = Encoding.UTF8.GetBytes(AudioEndMessage);
-        await socket.SendAsync(
-            message,
-            WebSocketMessageType.Text,
-            true,
-            CancellationToken.None);
-        Assert.Equal(WebSocketState.Open, socket.State);
-        
-        response = Encoding.UTF8.GetString(buffer, 0, result.Count);
-        json = JsonDocument.Parse(response);
-        Assert.True(json.RootElement.TryGetProperty("type", out messageType));
-        Assert.Equal("tts.start", messageType.GetString());
+        var end = await client.ReceiveJsonAsync();
+        Assert.Equal("tts.end", end.RootElement.GetProperty("type").GetString());
     }
 }
