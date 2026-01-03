@@ -60,8 +60,8 @@ public class SatelliteConnection
 
     private async Task HandleTextMessageAsync(byte[] buf, CancellationToken token)
     {
-        var stream = new MemoryStream(buf);
-        var json = await JsonDocument.ParseAsync(stream, cancellationToken: token);
+        var jsonStr = Encoding.UTF8.GetString(buf).TrimEnd('\0');
+        var json = JsonDocument.Parse(jsonStr);
 
         if (!json.RootElement.TryGetProperty("type", out var messageType))
         {
@@ -100,6 +100,8 @@ public class SatelliteConnection
                 var audioEnd = JsonSerializer.Deserialize<SatelliteAudioEnd>(raw, deserializeOpts);
                 if (audioEnd == null) return;
                 _state = SatelliteState.Processing;
+                // TEMP: Terminate session before audio frames. TODO: audio frame processing
+                await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Session complete", token);
                 break;
             case "session.abort":
                 var sessionAbort = JsonSerializer.Deserialize<SatelliteSessionAbort>(raw, deserializeOpts);
@@ -163,7 +165,7 @@ public class SatelliteConnection
 
     private async Task SendMessageAsync(SatelliteDto message, CancellationToken token)
     {
-        var json = JsonSerializer.Serialize(message);
+        var json = JsonSerializer.Serialize(message, message.GetType()); // Use GetType to preserve runtime type
         var buffer = Encoding.UTF8.GetBytes(json);
         await _socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, token);
     }

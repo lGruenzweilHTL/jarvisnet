@@ -36,7 +36,8 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
     });
 }));
 
-app.UseHttpsRedirection();
+// Https redirection is not supported for WebSocket connections
+//app.UseHttpsRedirection();
 
 
 app.Run();
