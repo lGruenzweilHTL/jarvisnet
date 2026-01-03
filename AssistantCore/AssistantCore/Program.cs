@@ -6,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+// TODO: add services for python workers (stt, router, llm, tts)
 
 var app = builder.Build();
 
@@ -32,7 +33,9 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
         }
 
         using var socket = await context.WebSockets.AcceptWebSocketAsync();
-        await SocketHandler.HandleSatelliteConnection(socket, context);
+        var connectionId = Guid.NewGuid().ToString();
+        var connection = new SatelliteConnection(connectionId, socket);
+        SatelliteManager.Instance.RegisterConnection(connection);
     });
 }));
 

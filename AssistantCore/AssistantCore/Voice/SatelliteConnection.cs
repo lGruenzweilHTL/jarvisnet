@@ -8,7 +8,7 @@ namespace AssistantCore.Voice;
 /// <summary>
 /// Represents a WebSocket connection to a satellite.
 /// This class manages the WebSocket, the session state machine and validation of messages.
-/// Use the exposed events to hook into the session lifecycle.
+/// The actual processing of audio and text is handled elsewhere, use the OnSessionCompleted event to get a finished user request.
 /// </summary>
 public class SatelliteConnection
 {
@@ -16,13 +16,12 @@ public class SatelliteConnection
     private readonly WebSocket _socket;
     
     public SatelliteConnectionState State { get; private set; }
-    public SatelliteHello? SatelliteInfo;
+    public SatelliteHello? SatelliteInfo { get; private set; }
 
-    public Action<SatelliteHello>? OnHelloReceived;
-    public Action<SatelliteSessionStart>? OnSessionStartReceived;
-    public Action<SatelliteSessionAbort>? OnSessionAbortReceived;
-    public Action<SatelliteAudioEnd>? OnAudioEndReceived;
-    public Action<byte[]>? OnAudioFrameReceived;
+    /// <summary>
+    /// Invoked on audio end message. The audio was received and is ready for processing.
+    /// </summary>
+    public Func<SatelliteSession, Task>? OnSessionCompleted;
     
     private SatelliteSession? _activeSession;
     
@@ -62,10 +61,8 @@ public class SatelliteConnection
         // Update state if this is the first audio frame
         if (State == SatelliteConnectionState.SessionActive) State = SatelliteConnectionState.ReceivingAudio;
         if (State != SatelliteConnectionState.ReceivingAudio) return;
-
-        var audioData = new byte[count];
-        Array.Copy(buf, audioData, count);
-        OnAudioFrameReceived?.Invoke(audioData);
+        
+        _activeSession!.AppendAudio(buf, count);
     }
 
     private void HandleTextMessageAsync(byte[] buf)
@@ -85,7 +82,6 @@ public class SatelliteConnection
                 SatelliteInfo = JsonSerializer.Deserialize<SatelliteHello>(jsonStr, deserializeOpts);
                 if (SatelliteInfo == null) return;
                 State = SatelliteConnectionState.Ready;
-                OnHelloReceived?.Invoke(SatelliteInfo);
                 break;
             case "session.start":
                 if (State != SatelliteConnectionState.Ready) return;
@@ -94,7 +90,6 @@ public class SatelliteConnection
                 if (sessionStart == null) return;
                 _activeSession = new SatelliteSession(sessionStart);
                 State = SatelliteConnectionState.SessionActive;
-                OnSessionStartReceived?.Invoke(sessionStart);
                 break;
             case "audio.end":
                 if (State != SatelliteConnectionState.ReceivingAudio) return;
@@ -102,7 +97,7 @@ public class SatelliteConnection
                 var audioEnd = JsonSerializer.Deserialize<SatelliteAudioEnd>(jsonStr, deserializeOpts);
                 if (audioEnd == null) return;
                 State = SatelliteConnectionState.WaitingForProcessing;
-                OnAudioEndReceived?.Invoke(audioEnd);
+                if (_activeSession != null) OnSessionCompleted?.Invoke(_activeSession);
                 break;
             case "session.abort":
                 if ((int)State < (int)SatelliteConnectionState.SessionActive) return;
@@ -111,12 +106,10 @@ public class SatelliteConnection
                 if (sessionAbort == null) return;
                 _activeSession = null;
                 State = SatelliteConnectionState.Ready;
-                OnSessionAbortReceived?.Invoke(sessionAbort);
                 break;
         }
     }
-
-    [Obsolete("Use SendMessageAsync and SendBytesAsync instead")]
+    
     public async Task SendTtsAsync(byte[] ttsData, CancellationToken token)
     {
         if (State != SatelliteConnectionState.WaitingForProcessing) return;
@@ -141,7 +134,8 @@ public class SatelliteConnection
         for (int offset = 0; offset < ttsData.Length; offset += frameSize)
         {
             int chunkSize = Math.Min(frameSize, ttsData.Length - offset);
-            await SendBytesAsync(new ArraySegment<byte>(ttsData, offset, chunkSize), token);
+            await _socket.SendAsync(new ArraySegment<byte>(ttsData, offset, chunkSize), 
+                WebSocketMessageType.Binary, true, token);
         }
 
         var ttsEnd = new SatelliteTtsEnd
@@ -186,16 +180,7 @@ public class SatelliteConnection
         await _socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, token);
     }
 
-    public async Task SendBytesAsync(byte[] data, CancellationToken token)
-    {
-        await SendBytesAsync(new ArraySegment<byte>(data), token);
-    }
-    public async Task SendBytesAsync(ArraySegment<byte> data, CancellationToken token)
-    {
-        await _socket.SendAsync(data, WebSocketMessageType.Binary, true, token);
-    }
-
-    public int GetAudioFrameSize()
+    private int GetAudioFrameSize()
     {
         if (SatelliteInfo == null) return 0;
         if (SatelliteInfo.AudioFormat.Encoding != "pcm_s16le")

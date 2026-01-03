@@ -4,6 +4,7 @@ namespace AssistantCore.Voice;
 
 /// <summary>
 /// Represents a single voice session with a satellite.
+/// A session starts with a SatelliteSessionStart message and ends with a SatelliteAudioEnd message and represents the audio data received from the Satellite.
 /// </summary>
 public class SatelliteSession
 {
