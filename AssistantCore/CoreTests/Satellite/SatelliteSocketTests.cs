@@ -55,7 +55,7 @@ public class SatelliteSocketTests(WebApplicationFactory<Program> factory)
             new Uri("ws://localhost/ws/satellite"),
             CancellationToken.None);
 
-        var message = "{\"type\":\"hello\",\"mic_id\":\"test\"}"u8.ToArray();
+        var message = Encoding.UTF8.GetBytes(HelloMessage);
 
         await socket.SendAsync(
             message,
@@ -98,7 +98,7 @@ public class SatelliteSocketTests(WebApplicationFactory<Program> factory)
             new Uri("ws://localhost/ws/satellite"),
             CancellationToken.None);
 
-        var message = "{\"type\":\"hello\",\"mic_id\":\"test\"}"u8.ToArray();
+        var message = Encoding.UTF8.GetBytes(HelloMessage);
 
         await socket.SendAsync(
             message,

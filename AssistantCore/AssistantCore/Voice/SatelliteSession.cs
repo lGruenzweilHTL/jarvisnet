@@ -24,6 +24,7 @@ public class SatelliteSession
 
     public void AppendAudio(byte[] audioData, int count)
     {
+        // TODO: fix (offset applies to buffer not stream)
         _audioBuffer.Write(audioData, _audioByteCount, count);
         _audioByteCount += count;
     }

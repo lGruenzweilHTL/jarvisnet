@@ -45,7 +45,7 @@ public class SatelliteConnection
                     await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", token);
                     break;
                 case WebSocketMessageType.Text:
-                    HandleTextMessageAsync(buffer);
+                    await HandleTextMessageAsync(buffer, token);
                     break;
                 case WebSocketMessageType.Binary:
                     HandleByteMessageAsync(buffer, result.Count);
@@ -65,7 +65,7 @@ public class SatelliteConnection
         _activeSession!.AppendAudio(buf, count);
     }
 
-    private void HandleTextMessageAsync(byte[] buf)
+    private async Task HandleTextMessageAsync(byte[] buf, CancellationToken token)
     {
         var jsonStr = Encoding.UTF8.GetString(buf).TrimEnd('\0');
         var json = JsonDocument.Parse(jsonStr);
@@ -82,6 +82,13 @@ public class SatelliteConnection
                 SatelliteInfo = JsonSerializer.Deserialize<SatelliteHello>(jsonStr, deserializeOpts);
                 if (SatelliteInfo == null) return;
                 State = SatelliteConnectionState.Ready;
+                var helloAck = new SatelliteHelloAck
+                {
+                    Type = "hello.ack",
+                    ProtocolVersion = SatelliteInfo.ProtocolVersion,
+                    Accepted = true
+                };
+                await SendMessageAsync(helloAck, token);
                 break;
             case "session.start":
                 if (State != SatelliteConnectionState.Ready) return;
@@ -90,6 +97,12 @@ public class SatelliteConnection
                 if (sessionStart == null) return;
                 _activeSession = new SatelliteSession(sessionStart);
                 State = SatelliteConnectionState.SessionActive;
+                var sessionAck = new SatelliteSessionAck
+                {
+                    Type = "session.ack",
+                    SessionId = _activeSession.SessionId
+                };
+                await SendMessageAsync(sessionAck, token);
                 break;
             case "audio.end":
                 if (State != SatelliteConnectionState.ReceivingAudio) return;

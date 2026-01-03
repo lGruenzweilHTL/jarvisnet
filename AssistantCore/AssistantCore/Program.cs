@@ -36,6 +36,7 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
         var connectionId = Guid.NewGuid().ToString();
         var connection = new SatelliteConnection(connectionId, socket);
         SatelliteManager.Instance.RegisterConnection(connection);
+        await connection.RunAsync(CancellationToken.None);
     });
 }));
 
