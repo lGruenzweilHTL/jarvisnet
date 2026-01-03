@@ -1,16 +1,28 @@
 ﻿using System.Collections.Concurrent;
+using AssistantCore.Workers;
 
 namespace AssistantCore.Voice;
 
 public class SatelliteManager
 {
-    public static SatelliteManager Instance { get; } = new();
-    
-    // TODO: fields for python workers
+    private ISttWorker _stt;
+    private IRoutingWorker _router;
+    private ILlmWorkerFactory _llmFactory;
+    private ITtsWorker _tts;
 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activePipelines = new();
-    
-    public SatelliteManager() {} // TODO: parameters for python workers
+
+    public SatelliteManager(
+        ISttWorker stt,
+        IRoutingWorker router,
+        ILlmWorkerFactory llmFactory,
+        ITtsWorker tts)
+    {
+        _stt = stt;
+        _router = router;
+        _llmFactory = llmFactory;
+        _tts = tts;
+    }
 
     public void RegisterConnection(SatelliteConnection connection)
     {
@@ -28,8 +40,8 @@ public class SatelliteManager
 
         var cts = new CancellationTokenSource();
         _activePipelines[connection.ConnectionId] = cts;
-
-        var orchestrator = new VoiceSessionOrchestrator(session, connection); // TODO: pass in python workers
+        
+        var orchestrator = new VoiceSessionOrchestrator(session, connection, _stt, _router, _llmFactory, _tts);
 
         try
         {

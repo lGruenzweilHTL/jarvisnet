@@ -1,4 +1,4 @@
-﻿using AssistantCore.Voice.Dto;
+﻿using AssistantCore.Workers;
 
 namespace AssistantCore.Voice;
 
@@ -10,41 +10,34 @@ public class VoiceSessionOrchestrator
 {
     private readonly SatelliteSession _session;
     private readonly SatelliteConnection _connection;
-    // TODO: interface with worker services for STT, Router, LLM, TTS
+    private readonly ISttWorker _stt;
+    private readonly IRoutingWorker _router;
+    private readonly ILlmWorkerFactory _llmFactory;
+    private readonly ITtsWorker _tts;
 
-    public VoiceSessionOrchestrator(SatelliteSession session, SatelliteConnection connection)
+    public VoiceSessionOrchestrator(
+        SatelliteSession session, 
+        SatelliteConnection connection,
+        ISttWorker stt,
+        IRoutingWorker router,
+        ILlmWorkerFactory llmFactory,
+        ITtsWorker tts)
     {
         _session = session;
         _connection = connection;
+        _stt = stt;
+        _router = router;
+        _llmFactory = llmFactory;
+        _tts = tts;
     }
 
     public async Task RunAsync(CancellationToken token)
     {
-        var text = await RunSttAsync(_session, token);
-        var speciality = await RouteAsync(text, token);
-        var response = await RunLlmAsync(speciality, text, token);
-        var audioBytes = await RunTtsAsync(response, token);
+        var text = await _stt.TranscribeAsync(_session.AudioBytes, token);
+        var speciality = await _router.RouteAsync(text, token);
+        var llm = _llmFactory.GetWorkerBySpeciality(speciality);
+        var response = await llm.GetResponseAsync(text, token);
+        var audioBytes = await _tts.SynthesizeAsync(response, token);
         await _connection.SendTtsAsync(audioBytes, token);
-    }
-
-    private static async Task<string> RunSttAsync(SatelliteSession session, CancellationToken token)
-    {
-        return "";
-    }
-
-    // TODO: use an enum for specialities
-    private static async Task<string> RouteAsync(string transcript, CancellationToken token)
-    {
-        return "";
-    }
-
-    private static async Task<string> RunLlmAsync(string speciality, string prompt, CancellationToken token)
-    {
-        return "";
-    }
-
-    private static async Task<byte[]> RunTtsAsync(string response, CancellationToken token)
-    {
-        return [];
     }
 }

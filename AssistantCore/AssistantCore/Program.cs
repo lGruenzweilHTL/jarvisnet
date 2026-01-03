@@ -1,4 +1,6 @@
 using AssistantCore.Voice;
+using AssistantCore.Workers;
+using AssistantCore.Workers.Impl;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
-// TODO: add services for python workers (stt, router, llm, tts)
+
+builder.Services.AddSingleton<ILlmWorkerFactory, LlmWorkerFactory>();
+builder.Services.AddSingleton<ISttWorker, DummyStt>();
+builder.Services.AddSingleton<IRoutingWorker, DummyRouter>();
+builder.Services.AddSingleton<ILlmWorker, DummyLlm>();
+builder.Services.AddSingleton<ITtsWorker, DummyTts>();
+builder.Services.AddSingleton<SatelliteManager>();
 
 var app = builder.Build();
 
@@ -32,11 +40,19 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
             return;
         }
 
-        using var socket = await context.WebSockets.AcceptWebSocketAsync();
+        var manager = context.RequestServices.GetRequiredService<SatelliteManager>();
+        var socket = await context.WebSockets.AcceptWebSocketAsync();
         var connectionId = Guid.NewGuid().ToString();
-        var connection = new SatelliteConnection(connectionId, socket);
-        SatelliteManager.Instance.RegisterConnection(connection);
-        await connection.RunAsync(CancellationToken.None);
+        var connection = new SatelliteConnection(connectionId, socket); // TODO: for later: SatelliteConnectionFactory.CreateConnection(...)
+        manager.RegisterConnection(connection);
+        try
+        {
+            await connection.RunAsync(context.RequestAborted);
+        }
+        finally
+        {
+            manager.UnregisterConnection(connection);
+        }
     });
 }));
 
