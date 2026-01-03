@@ -3,15 +3,15 @@
 public class SatelliteRegistry
 {
     public static SatelliteRegistry Instance { get; } = new();
-    private List<SatelliteConnection> _connections = [];
+    public List<SatelliteConnection> Connections { get; } = [];
 
     public void Register(SatelliteConnection conn)
     {
-        _connections.Add(conn);
+        Connections.Add(conn);
     }
 
     public bool Unregister(SatelliteConnection conn)
     {
-        return _connections.Remove(conn);
+        return Connections.Remove(conn);
     }
 }

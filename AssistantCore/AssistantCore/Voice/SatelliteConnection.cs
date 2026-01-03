@@ -13,7 +13,7 @@ public class SatelliteConnection
     private readonly string _connectionId;
     private readonly WebSocket _socket;
     
-    private SatelliteState _state;
+    public SatelliteState State { get; private set; }
     private SatelliteHello? _info;
     private SatelliteSessionStart? _session;
     
@@ -21,7 +21,7 @@ public class SatelliteConnection
     {
         _connectionId = connectionId;
         _socket = socket;
-        _state = SatelliteState.Disconnected;
+        State = SatelliteState.Disconnected;
     }
 
     public async Task RunAsync(CancellationToken token)
@@ -54,7 +54,7 @@ public class SatelliteConnection
 
     private async Task HandleByteMessageAsync(byte[] buf, int count, CancellationToken token)
     {
-        if (_state != SatelliteState.SessionActive) return; // Can't accept audio if no session is active
+        if (State != SatelliteState.SessionActive) return; // Can't accept audio if no session is active
         // TODO: Handle incoming audio frames
     }
 
@@ -76,7 +76,7 @@ public class SatelliteConnection
             case "hello":
                 _info = JsonSerializer.Deserialize<SatelliteHello>(raw, deserializeOpts);
                 if (_info == null) return;
-                _state = SatelliteState.Connected;
+                State = SatelliteState.Connected;
                 var helloAck = new SatelliteHelloAck
                 {
                     Type = "hello.ack",
@@ -88,7 +88,7 @@ public class SatelliteConnection
             case "session.start":
                 _session = JsonSerializer.Deserialize<SatelliteSessionStart>(raw, deserializeOpts);
                 if (_session == null) return;
-                _state = SatelliteState.SessionActive;
+                State = SatelliteState.SessionActive;
                 var sessionAck = new SatelliteSessionAck
                 {
                     Type = "session.ack",
@@ -99,21 +99,21 @@ public class SatelliteConnection
             case "audio.end":
                 var audioEnd = JsonSerializer.Deserialize<SatelliteAudioEnd>(raw, deserializeOpts);
                 if (audioEnd == null) return;
-                _state = SatelliteState.Processing;
+                State = SatelliteState.Processing;
                 // TEMP: Terminate session before audio frames. TODO: audio frame processing
                 await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Session complete", token);
                 break;
             case "session.abort":
                 var sessionAbort = JsonSerializer.Deserialize<SatelliteSessionAbort>(raw, deserializeOpts);
                 if (sessionAbort == null) return;
-                _state = SatelliteState.Connected;
+                State = SatelliteState.Connected;
                 break;
         }
     }
 
     public async Task SendTtsAsync(byte[] ttsData, CancellationToken token)
     {
-        if (_state != SatelliteState.Processing) return;
+        if (State != SatelliteState.Processing) return;
 
         var ttsStart = new SatelliteTtsStart
         {
@@ -123,7 +123,7 @@ public class SatelliteConnection
             Streaming = true
         };
         await SendMessageAsync(ttsStart, token);
-        _state = SatelliteState.Playback;
+        State = SatelliteState.Playback;
         
         // Stream audio in chunks
         throw new NotImplementedException();
@@ -134,7 +134,7 @@ public class SatelliteConnection
             SessionId = _session!.SessionId
         };
         await SendMessageAsync(ttsEnd, token);
-        _state = SatelliteState.Connected;
+        State = SatelliteState.Connected;
     }
 
     public async Task SendErrorAsync(string code, string message, CancellationToken token)
@@ -148,12 +148,12 @@ public class SatelliteConnection
         };
         await SendMessageAsync(error, token);
 
-        _state = SatelliteState.Connected;
+        State = SatelliteState.Connected;
     }
 
     public async Task SendBargeInAsync(CancellationToken token)
     {
-        if (_state != SatelliteState.Playback) return; // Can only barge in during tts playback
+        if (State != SatelliteState.Playback) return; // Can only barge in during tts playback
         
         var bargeIn = new SatelliteBargeIn
         {
