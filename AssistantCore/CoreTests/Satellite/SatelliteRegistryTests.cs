@@ -20,6 +20,6 @@ public class SatelliteRegistryTests(WebApplicationFactory<Program> factory)
         Assert.Equal(WebSocketState.Open, socket.State);
         Assert.NotNull(SatelliteRegistry.Instance);
         var conn = Assert.Single(SatelliteRegistry.Instance.Connections);
-        Assert.Equal(SatelliteState.Disconnected, conn.State);
+        Assert.Equal(SatelliteConnectionState.Connected, conn.State);
     }
 }
