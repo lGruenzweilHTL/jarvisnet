@@ -7,7 +7,8 @@
 
 #define I2S_BCK 19
 #define I2S_WS 33
-#define I2S_SD 23
+#define I2S_SPK_SD 22    // Speaker data output
+#define I2S_MIC_SD 23    // Microphone data input
 #define ButtonPin 39
 #define LEDPin 27
 

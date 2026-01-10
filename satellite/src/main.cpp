@@ -21,6 +21,20 @@ State currentState = DISCONNECTED;
 int16_t audioBuffer[BUFFER_SAMPLES];
 bool buttonWasPressed = false;
 
+// Playback ring buffer for incoming TTS audio
+constexpr size_t PLAYBACK_BUFFER_SIZE = 65536; // 64KB buffer
+uint8_t playbackBuffer[PLAYBACK_BUFFER_SIZE];
+size_t playbackWritePos = 0;
+size_t playbackReadPos = 0;
+size_t playbackBytesAvailable = 0;
+
+void flushPlaybackBuffer()
+{
+  playbackWritePos = 0;
+  playbackReadPos = 0;
+  playbackBytesAvailable = 0;
+}
+
 // Audio recording state
 int16_t recordBuffer[BUFFER_SAMPLES * 2]; // 2x buffer for accumulating audio before sending
 size_t recordedBytes = 0;
@@ -50,11 +64,11 @@ void setupI2SMic()
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_PDM),
       .sample_rate = SAMPLE_RATE,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-      .communication_format = I2S_COMM_FORMAT_STAND_MSB,
+      .channel_format = I2S_CHANNEL_FMT_ALL_RIGHT,
+      .communication_format = I2S_COMM_FORMAT_STAND_I2S,
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-      .dma_buf_count = 4,
-      .dma_buf_len = BUFFER_SAMPLES,
+      .dma_buf_count = 6,
+      .dma_buf_len = 60,
       .use_apll = false,
       .tx_desc_auto_clear = false,
       .fixed_mclk = 0};
@@ -63,23 +77,27 @@ void setupI2SMic()
       .bck_io_num = I2S_BCK,
       .ws_io_num = I2S_WS,
       .data_out_num = I2S_PIN_NO_CHANGE,
-      .data_in_num = I2S_SD};
+      .data_in_num = I2S_MIC_SD};
 
   i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
   i2s_set_pin(I2S_NUM_0, &pin_config);
+  i2s_set_clk(I2S_NUM_0, SAMPLE_RATE, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_MONO);
 }
 
 void setupI2SSpeaker()
 {
+  // Stop mic temporarily while speaker is active
+  i2s_stop(I2S_NUM_0);
+  
   i2s_config_t i2s_config = {
       .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
       .sample_rate = SAMPLE_RATE,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-      .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-      .communication_format = I2S_COMM_FORMAT_STAND_MSB,
+      .channel_format = I2S_CHANNEL_FMT_ALL_RIGHT,
+      .communication_format = I2S_COMM_FORMAT_STAND_I2S,
       .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-      .dma_buf_count = 4,
-      .dma_buf_len = BUFFER_SAMPLES,
+      .dma_buf_count = 2,
+      .dma_buf_len = 128,
       .use_apll = false,
       .tx_desc_auto_clear = true,
       .fixed_mclk = 0};
@@ -87,20 +105,31 @@ void setupI2SSpeaker()
   i2s_pin_config_t pin_config = {
       .bck_io_num = I2S_BCK,
       .ws_io_num = I2S_WS,
-      .data_out_num = I2S_SD,
+      .data_out_num = I2S_SPK_SD,
       .data_in_num = I2S_PIN_NO_CHANGE};
+      
   i2s_driver_install(I2S_NUM_1, &i2s_config, 0, NULL);
   i2s_set_pin(I2S_NUM_1, &pin_config);
+  i2s_set_clk(I2S_NUM_1, SAMPLE_RATE, I2S_BITS_PER_SAMPLE_16BIT, I2S_CHANNEL_MONO);
+  i2s_start(I2S_NUM_1);
+  Serial.println("I2S speaker initialized");
 }
 
 void deinitI2SSpeaker()
 {
+  // Stop I2S output and flush DMA buffers
+  i2s_zero_dma_buffer(I2S_NUM_1);
+  i2s_stop(I2S_NUM_1);
   i2s_driver_uninstall(I2S_NUM_1);
-  // Return pins to GPIO mode and set to safe state (LOW with pulldown)
-  pinMode(I2S_BCK, INPUT_PULLDOWN);
-  pinMode(I2S_WS, INPUT_PULLDOWN);
-  pinMode(I2S_SD, INPUT_PULLDOWN);
-  Serial.println("I2S speaker deinitialized");
+  
+  // Set speaker data pin to LOW (don't touch shared BCK/WS)
+  pinMode(I2S_SPK_SD, OUTPUT);
+  digitalWrite(I2S_SPK_SD, LOW);
+  
+  // Restart microphone
+  i2s_start(I2S_NUM_0);
+  
+  Serial.println("I2S speaker deinitialized, mic restarted");
 }
 
 void createHelloMessage(char *buffer, size_t bufferSize)
@@ -173,11 +202,108 @@ void sendRemainingAudio()
   showColor(IDLE_COLOR);
 }
 
+// Enqueue incoming audio data into playback ring buffer
+void enqueuePlayback(const uint8_t *data, size_t length)
+{
+  if (length > PLAYBACK_BUFFER_SIZE)
+  {
+    // Too large; drop
+    Serial.println("Playback buffer overflow: chunk too large");
+    return;
+  }
+
+  // Check available space
+  size_t freeSpace = PLAYBACK_BUFFER_SIZE - playbackBytesAvailable;
+  if (length > freeSpace)
+  {
+    Serial.println("Playback buffer overflow: not enough space");
+    return;
+  }
+
+  size_t first = min(length, PLAYBACK_BUFFER_SIZE - playbackWritePos);
+  memcpy(playbackBuffer + playbackWritePos, data, first);
+  size_t remaining = length - first;
+  if (remaining > 0)
+  {
+    memcpy(playbackBuffer, data + first, remaining);
+  }
+
+  playbackWritePos = (playbackWritePos + length) % PLAYBACK_BUFFER_SIZE;
+  playbackBytesAvailable += length;
+}
+
+// Drain a small chunk to the speaker to avoid blocking too long in loop
+void drainPlaybackToSpeaker()
+{
+  if (playbackBytesAvailable == 0)
+  {
+    // Nothing to play
+    return;
+  }
+
+  const size_t chunkSize = 1024; // bytes per drain
+  size_t toWrite = min(chunkSize, playbackBytesAvailable);
+
+  size_t first = min(toWrite, PLAYBACK_BUFFER_SIZE - playbackReadPos);
+  size_t writtenTotal = 0;
+
+  // First segment
+  size_t bytesWritten = 0;
+  esp_err_t res = i2s_write(I2S_NUM_1,
+                            playbackBuffer + playbackReadPos,
+                            first,
+                            &bytesWritten,
+                            portMAX_DELAY);
+  writtenTotal += bytesWritten;
+
+  // Second segment if wrapped
+  if (res == ESP_OK && writtenTotal == first && toWrite > first)
+  {
+    size_t secondLen = toWrite - first;
+    size_t bytesWritten2 = 0;
+    res = i2s_write(I2S_NUM_1,
+                    playbackBuffer,
+                    secondLen,
+                    &bytesWritten2,
+                    portMAX_DELAY);
+    writtenTotal += bytesWritten2;
+  }
+
+  playbackReadPos = (playbackReadPos + writtenTotal) % PLAYBACK_BUFFER_SIZE;
+  playbackBytesAvailable -= writtenTotal;
+
+  if (res != ESP_OK)
+  {
+    Serial.printf("I2S write error during drain: %d\n", res);
+  }
+}
+
 void playAudioChunk(const uint8_t *data, size_t length)
 {
-  size_t bytesWritten = 0;
-  i2s_write(I2S_NUM_1, data, length, &bytesWritten, portMAX_DELAY);
-  Serial.println("Played audio chunk: " + String(bytesWritten) + " bytes");
+  // Ensure we push the entire buffer to the speaker; loop in case of partial writes
+  size_t totalWritten = 0;
+  while (totalWritten < length)
+  {
+    size_t bytesWritten = 0;
+    esp_err_t result = i2s_write(I2S_NUM_1,
+                                 data + totalWritten,
+                                 length - totalWritten,
+                                 &bytesWritten,
+                                 portMAX_DELAY);
+    if (result != ESP_OK)
+    {
+      Serial.printf("I2S write error: %d after %u bytes\n", result, (unsigned)totalWritten);
+      break;
+    }
+    totalWritten += bytesWritten;
+    if (bytesWritten == 0)
+    {
+      // Avoid a tight loop if nothing was written
+      delay(1);
+    }
+  }
+
+  Serial.printf("Played audio chunk: %u/%u bytes\n", (unsigned)totalWritten, (unsigned)length);
 }
 
 void handleSessionAck(JsonDocument &doc)
@@ -189,6 +315,7 @@ void handleSessionAck(JsonDocument &doc)
 void handleTTSStart(JsonDocument &doc)
 {
   Serial.println("TTS started");
+  flushPlaybackBuffer();
   setupI2SSpeaker();
   currentState = PLAYING_TTS;
   showColor(PLAYBACK_COLOR);
@@ -196,7 +323,10 @@ void handleTTSStart(JsonDocument &doc)
 void handleTTSEnd(JsonDocument &doc)
 {
   Serial.println("TTS ended");
+  // Ensure buffer is cleared before stopping speaker to avoid leftover hum
+  flushPlaybackBuffer();
   deinitI2SSpeaker();
+  delay(20);
   currentState = READY;
   showColor(IDLE_COLOR);
 }
@@ -207,8 +337,8 @@ void handleBinaryMessage(const uint8_t *data, size_t length)
     Serial.println("Received unexpected binary data");
     return;
   }
-  // TODO: Buffer audio data if needed, Play audio data immediately for now
-  // playAudioChunk(data, length);
+  // Buffer audio data; playback is drained in loop() to maintain order
+  enqueuePlayback(data, length);
 }
 
 void onWebSocketEvent(WStype_t type, uint8_t *payload, size_t length)
@@ -352,14 +482,7 @@ void setup()
   Serial.begin(115200);
 
   pinMode(ButtonPin, INPUT_PULLDOWN);
-  pinMode(LEDPin, OUTPUT);
-  pinMode(I2S_BCK, INPUT_PULLDOWN);
-  pinMode(I2S_WS, INPUT_PULLDOWN);
-  pinMode(I2S_SD, INPUT_PULLDOWN);
-
-  digitalWrite(I2S_BCK, LOW);
-  digitalWrite(I2S_WS, LOW);
-  digitalWrite(I2S_SD, LOW);
+  pinMode(LEDPin, OUTPUT);  
 
   Serial.println("Initializing System...");
   led.begin();
@@ -372,11 +495,10 @@ void setup()
   setupI2SMic();
   Serial.println("I2S microphone setup complete.");
   
-  // Set I2S speaker pins to safe state (will be initialized on-demand during TTS)
-  pinMode(I2S_BCK, INPUT_PULLDOWN);
-  pinMode(I2S_WS, INPUT_PULLDOWN);
-  pinMode(I2S_SD, INPUT_PULLDOWN);
-  Serial.println("I2S speaker pins initialized to safe state.");
+  // Set I2S speaker data pin to safe state (BCK/WS are shared with mic, don't touch)
+  pinMode(I2S_SPK_SD, OUTPUT);
+  digitalWrite(I2S_SPK_SD, LOW);
+  Serial.println("I2S speaker data pin initialized to safe state.");
 
   delay(100);
   connectToWifi();
@@ -418,7 +540,7 @@ void loop()
     // Waiting for server response
     break;
   case PLAYING_TTS:
-    // TODO: Play TTS audio
+    drainPlaybackToSpeaker();
     break;
   }
 }
