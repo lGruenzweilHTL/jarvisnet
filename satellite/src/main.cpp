@@ -3,25 +3,8 @@
 #include <WebSocketsClient.h>
 #include <Adafruit_NeoPixel.h>
 #include "driver/i2s.h"
+#include "config.h"
 
-// ================= CONFIG =================
-const char *WIFI_SSID = "HUAWEI-2.4G-v4Dq";
-const char *WIFI_PASS = "958cf3jX";
-
-const char *WS_HOST = "example.com";
-const uint16_t WS_PORT = 80;
-const char *WS_PATH = "/";
-
-// Atom Echo pins
-#define I2S_BCK 19
-#define I2S_WS 33
-#define I2S_SD 23
-#define ButtonPin 39
-#define LEDPin 27
-
-// Audio
-#define SAMPLE_RATE 16000
-#define BUFFER_SAMPLES 512 // 32 ms
 int16_t audioBuffer[BUFFER_SAMPLES];
 
 // =========================================
