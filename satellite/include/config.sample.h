@@ -13,3 +13,14 @@
 
 #define SAMPLE_RATE 16000
 #define BUFFER_SAMPLES 512
+
+#define PROTOCOL_VERSION 1
+#define DEVICE_ID "device-001"
+#define DEVICE_AREA "kitchen"
+#define DEVICE_LANGUAGE "en-US"
+#define DEVICE_CAPABILITIES "speaker,supports-barge-in,supports-streaming-tts"
+
+#define IDLE_COLOR 0x00FF00 // Green
+#define RECORDING_COLOR 0xFF0000 // Red
+#define PLAYBACK_COLOR 0x0000FF // Blue
+#define ERROR_COLOR 0xFF00FF // Magenta
