@@ -3,15 +3,15 @@ using AssistantCore.Workers;
 
 namespace AssistantCore.Tools;
 
-public static class ToolCollector
+public class ToolCollector
 {
-    private static bool isInitialized = false;
-    private static ToolData[] toolMethods;
+    private bool isInitialized = false;
+    private ToolData[] toolMethods = [];
+    private List<Assembly> assemblies = [];
 
-    private static void GetToolMethods()
+    private void GetToolMethods()
     {
-        var tools = Assembly.GetExecutingAssembly()
-            .GetTypes()
+        var tools = assemblies.SelectMany(assembly => assembly.GetTypes())
             .SelectMany(t => t.GetMethods())
             .Select(m => new {Method = m, Attribute = m.GetCustomAttribute<LlmToolAttribute>()})
             .Where(t => t.Attribute != null)
@@ -36,20 +36,33 @@ public static class ToolCollector
         isInitialized = true;
     }
 
-    public static ToolData[] GetTools()
+    public ToolData[] GetTools(bool refresh = false)
     {
-        if (!isInitialized) 
+        if (!isInitialized || refresh)
             GetToolMethods();
 
         return toolMethods;
     }
-    public static ToolData[] GetToolsBySpeciality(LlmSpeciality speciality)
+    public ToolData[] GetToolsBySpeciality(LlmSpeciality speciality, bool refresh = false)
     {
-        if (!isInitialized) 
+        if (!isInitialized || refresh) 
             GetToolMethods();
 
         return toolMethods
             .Where(t => t.Attribute.Speciality.HasFlag(speciality))
             .ToArray();
+    }
+    
+    public void AddAssembly(Assembly assembly)
+    {
+        assemblies.Add(assembly);
+    }
+    public void RemoveAssembly(Assembly assembly)
+    {
+        assemblies.Remove(assembly);
+    }
+    public void SetAssemblies(List<Assembly> assemblyList)
+    {
+        assemblies = assemblyList;
     }
 }
