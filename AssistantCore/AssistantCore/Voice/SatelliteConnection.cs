@@ -25,11 +25,15 @@ public class SatelliteConnection
     
     private SatelliteSession? _activeSession;
     
-    public SatelliteConnection(string connectionId, WebSocket socket)
+    private SatelliteConnection(string connectionId, WebSocket socket)
     {
         ConnectionId = connectionId;
         _socket = socket;
         State = SatelliteConnectionState.Connected;
+    }
+    public static SatelliteConnection Create(string connectionId, WebSocket socket)
+    {
+        return new SatelliteConnection(connectionId, socket);
     }
 
     public async Task RunAsync(CancellationToken token)
