@@ -12,7 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure logging: console (default) and a simple file logger provider
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-var logPath = builder.Configuration.GetValue<string>("LogFilePath") ?? "assistantcore.log";
+var logDir = builder.Configuration.GetValue<string>("LogDirectory") ?? "logs";
+var logPath = Path.Combine(logDir, $"assistantcore-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
 var fileProvider = new FileLoggerProvider(logPath);
 builder.Services.AddSingleton<ILoggerProvider>(fileProvider);
 
