@@ -6,7 +6,7 @@ namespace AssistantCore.Tools;
 public class ToolCollector
 {
     private bool isInitialized = false;
-    private ToolData[] toolMethods = [];
+    private ToolDefinition[] toolMethods = [];
     private List<Assembly> assemblies = [];
 
     private void GetToolMethods()
@@ -18,12 +18,12 @@ public class ToolCollector
             .ToArray();
         
         toolMethods = tools
-            .Select(t => new ToolData
+            .Select(t => new ToolDefinition
             {
                 Method = t.Method,
                 Attribute = t.Attribute!,
                 Params = t.Method.GetParameters()
-                    .Select(p => new ToolData.ParamData
+                    .Select(p => new ToolDefinition.ParamData
                     {
                         Info = p,
                         Attribute = p.GetCustomAttribute<LlmToolParamAttribute>() ?? 
@@ -36,14 +36,14 @@ public class ToolCollector
         isInitialized = true;
     }
 
-    public ToolData[] GetTools(bool refresh = false)
+    public ToolDefinition[] GetTools(bool refresh = false)
     {
         if (!isInitialized || refresh)
             GetToolMethods();
 
         return toolMethods;
     }
-    public ToolData[] GetToolsBySpeciality(LlmSpeciality speciality, bool refresh = false)
+    public ToolDefinition[] GetToolsBySpeciality(LlmSpeciality speciality, bool refresh = false)
     {
         if (!isInitialized || refresh) 
             GetToolMethods();

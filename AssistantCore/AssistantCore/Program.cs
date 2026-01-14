@@ -2,11 +2,9 @@ using AssistantCore.Tools;
 using AssistantCore.Voice;
 using AssistantCore.Workers;
 using AssistantCore.Workers.Impl;
+using AssistantCore.Chat;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddControllers();
 
 builder.Services.AddSingleton<ToolCollector>();
@@ -15,7 +13,45 @@ builder.Services.AddSingleton<ISttWorker, DummyStt>();
 builder.Services.AddSingleton<IRoutingWorker, DummyRouter>();
 builder.Services.AddSingleton<ILlmWorker, DummyLlm>();
 builder.Services.AddSingleton<ITtsWorker, DummyTts>();
+builder.Services.AddSingleton(provider => ChatManager.Create(TimeSpan.FromMinutes(30)));
 builder.Services.AddSingleton<SatelliteManager>();
+
+// Register system prompts from configuration
+var logger = LoggerFactory.Create(logging => logging.AddConsole()).CreateLogger("Startup");
+var promptsSection = builder.Configuration.GetSection("SystemPrompts");
+if (promptsSection.Exists())
+{
+    var dict = new Dictionary<LlmSpeciality, string>();
+    foreach (var child in promptsSection.GetChildren())
+    {
+        var key = child.Key;
+        var value = child.Value;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            logger.LogWarning("Skipping empty system prompt for key '{Key}'", key);
+            continue;
+        }
+
+        if (!Enum.TryParse<LlmSpeciality>(key, ignoreCase: true, out var speciality))
+        {
+            logger.LogWarning("Unknown LlmSpeciality key in SystemPrompts configuration: '{Key}'", key);
+            continue;
+        }
+
+        dict[speciality] = value;
+        logger.LogInformation("Loaded system prompt for speciality {Speciality}", speciality);
+    }
+
+    try
+    {
+        SystemPromptRegistry.RegisterAll(dict, overwrite: true);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to register system prompts at startup");
+        throw;
+    }
+}
 
 var app = builder.Build();
 

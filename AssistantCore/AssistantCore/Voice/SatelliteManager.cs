@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using AssistantCore.Workers;
+using AssistantCore.Chat;
 
 namespace AssistantCore.Voice;
 
@@ -9,6 +10,7 @@ public class SatelliteManager
     private IRoutingWorker _router;
     private ILlmWorkerFactory _llmFactory;
     private ITtsWorker _tts;
+    private ChatManager _chat;
 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activePipelines = new();
 
@@ -16,12 +18,14 @@ public class SatelliteManager
         ISttWorker stt,
         IRoutingWorker router,
         ILlmWorkerFactory llmFactory,
-        ITtsWorker tts)
+        ITtsWorker tts,
+        ChatManager chat)
     {
         _stt = stt;
         _router = router;
         _llmFactory = llmFactory;
         _tts = tts;
+        _chat = chat;
     }
 
     public void RegisterConnection(SatelliteConnection connection)
@@ -41,7 +45,7 @@ public class SatelliteManager
         var cts = new CancellationTokenSource();
         _activePipelines[connection.ConnectionId] = cts;
         
-        var orchestrator = new VoiceSessionOrchestrator(session, connection, _stt, _router, _llmFactory, _tts);
+        var orchestrator = new VoiceSessionOrchestrator(session, connection, _stt, _router, _llmFactory, _tts, _chat);
 
         try
         {

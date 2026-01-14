@@ -3,7 +3,7 @@ using AssistantCore.Tools.Dto;
 
 namespace AssistantCore.Tools;
 
-public struct ToolData
+public struct ToolDefinition
 {
     public struct ParamData
     {
