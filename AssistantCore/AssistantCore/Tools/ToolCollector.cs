@@ -1,9 +1,10 @@
 using System.Reflection;
 using AssistantCore.Workers;
+using Microsoft.Extensions.Logging;
 
 namespace AssistantCore.Tools;
 
-public class ToolCollector
+public class ToolCollector(ILogger<ToolCollector> logger)
 {
     private bool isInitialized = false;
     private ToolDefinition[] toolMethods = [];
@@ -11,12 +12,13 @@ public class ToolCollector
 
     private void GetToolMethods()
     {
+        logger.LogInformation("Discovering tool methods in {AssemblyCount} assemblies", assemblies.Count);
         var tools = assemblies.SelectMany(assembly => assembly.GetTypes())
             .SelectMany(t => t.GetMethods())
             .Select(m => new {Method = m, Attribute = m.GetCustomAttribute<LlmToolAttribute>()})
             .Where(t => t.Attribute != null)
             .ToArray();
-        
+
         toolMethods = tools
             .Select(t => new ToolDefinition
             {
@@ -32,7 +34,8 @@ public class ToolCollector
                     .ToArray()
             })
             .ToArray();
-        
+
+        logger?.LogInformation("Discovered {ToolCount} tools", toolMethods.Length);
         isInitialized = true;
     }
 
@@ -56,13 +59,16 @@ public class ToolCollector
     public void AddAssembly(Assembly assembly)
     {
         assemblies.Add(assembly);
+        logger?.LogInformation("Added assembly {AssemblyName} to ToolCollector", assembly.FullName);
     }
     public void RemoveAssembly(Assembly assembly)
     {
         assemblies.Remove(assembly);
+        logger?.LogInformation("Removed assembly {AssemblyName} from ToolCollector", assembly.FullName);
     }
     public void SetAssemblies(List<Assembly> assemblyList)
     {
         assemblies = assemblyList;
+        logger?.LogInformation("Set assemblies for ToolCollector; count={Count}", assemblyList.Count);
     }
 }

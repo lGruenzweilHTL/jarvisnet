@@ -1,3 +1,4 @@
+using System.Reflection;
 using AssistantCore.Tools;
 using AssistantCore.Voice;
 using AssistantCore.Workers;
@@ -18,7 +19,13 @@ builder.Services.AddSingleton<ILoggerProvider>(fileProvider);
 
 builder.Services.AddControllers();
 
-builder.Services.AddSingleton<ToolCollector>();
+builder.Services.AddSingleton(provider =>
+{
+    var logger = provider.GetService<ILogger<ToolCollector>>();
+    var tc = new ToolCollector(logger!);
+    tc.SetAssemblies([Assembly.GetExecutingAssembly()]);
+    return tc;
+});
 builder.Services.AddSingleton<ILlmWorkerFactory, LlmWorkerFactory>();
 builder.Services.AddSingleton<ISttWorker, DummyStt>();
 builder.Services.AddSingleton<IRoutingWorker, DummyRouter>();
