@@ -98,4 +98,17 @@ public class ToolCollectorTests
         Assert.Equal("A number to process.", numberParam.Attribute.Description);
         Assert.True(numberParam.Attribute.Required);
     }
+
+    [Fact]
+    public void GetTools_EnumTool_ToolParameterHasCorrectType()
+    {
+        var collector = CreateCollectorWithAssemblies(typeof(ToolCollectorTests).Assembly);
+
+        var tools = collector.GetTools();
+        var enumTool = tools.First(t => t.Method.Name == nameof(TestingTools.EnumTool));
+
+        var enumParam = enumTool.Params.Single();
+        Assert.Equal("option", enumParam.Attribute.ParamName);
+        Assert.Equal(typeof(SampleEnum), enumParam.Info.ParameterType);
+    }
 }

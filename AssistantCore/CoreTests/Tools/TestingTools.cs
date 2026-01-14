@@ -3,7 +3,14 @@ using AssistantCore.Workers;
 
 namespace CoreTests.Tools;
 
-public class TestingTools
+internal enum SampleEnum
+{
+    OptionA,
+    OptionB,
+    OptionC
+}
+
+internal class TestingTools
 {
     [LlmTool("dummy1", "A dummy tool for testing purposes.", LlmSpeciality.General)]
     public static string DummyTool1(
@@ -18,5 +25,13 @@ public class TestingTools
         [LlmToolParam("number", "A number to process.", true)] int number)
     {
         return number * number;
+    }
+
+    [LlmTool("enum", "A tool that takes an enum parameter.", LlmSpeciality.General)]
+    public static string EnumTool(
+        [LlmToolParam("option", "An option from the enum", true)]
+        SampleEnum @enum)
+    {
+        return @enum.ToString();
     }
 }
