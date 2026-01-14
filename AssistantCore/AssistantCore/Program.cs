@@ -6,14 +6,13 @@ using AssistantCore.Workers.Impl;
 using AssistantCore.Chat;
 using AssistantCore.Logging;
 using AssistantCore.Middleware;
-using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure logging: console (default) and a simple file logger provider
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
-var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "assistant.log");
+var logPath = builder.Configuration.GetValue<string>("LogFilePath") ?? "assistantcore.log";
 var fileProvider = new FileLoggerProvider(logPath);
 builder.Services.AddSingleton<ILoggerProvider>(fileProvider);
 
@@ -97,11 +96,19 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
         var manager = context.RequestServices.GetRequiredService<SatelliteManager>();
         var socket = await context.WebSockets.AcceptWebSocketAsync();
         var connectionId = Guid.NewGuid().ToString();
-        var connection = SatelliteConnection.Create(connectionId, socket);
+        var connLogger = context.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger($"SatelliteConnection-{connectionId}");
+        connLogger.LogInformation("Accepted new satellite connection {ConnectionId}", connectionId);
+        var connection = SatelliteConnection.Create(connectionId, socket, connLogger);
         manager.RegisterConnection(connection);
         try
         {
-            await connection.RunAsync(context.RequestAborted);
+            // Link the HttpContext request cancellation with the host shutdown token so connection
+            // RunAsync exits promptly when the application is stopping.
+            var hostLifetime = context.RequestServices.GetRequiredService<IHostApplicationLifetime>();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, hostLifetime.ApplicationStopping);
+            await connection.RunAsync(linkedCts.Token);
         }
         finally
         {
@@ -109,6 +116,15 @@ app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
         }
     });
 }));
+
+// Ensure we cancel any active voice pipelines when host is shutting down
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    var mgr = app.Services.GetRequiredService<SatelliteManager>();
+    var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    startupLogger.LogInformation("Application stopping: cancelling active satellite pipelines");
+    mgr.CancelAllPipelines();
+});
 
 // Https redirection is not supported for WebSocket connections
 //app.UseHttpsRedirection();

@@ -15,7 +15,7 @@ public class SatelliteConnection
 {
     public string ConnectionId { get; }
     private readonly WebSocket _socket;
-    private readonly ILogger<SatelliteConnection>? _logger;
+    private readonly ILogger? _logger;
 
     public SatelliteConnectionState State { get; private set; }
     public SatelliteHello? SatelliteInfo { get; private set; }
@@ -27,7 +27,7 @@ public class SatelliteConnection
 
     private SatelliteSession? _activeSession;
 
-    private SatelliteConnection(string connectionId, WebSocket socket, ILogger<SatelliteConnection>? logger = null)
+    private SatelliteConnection(string connectionId, WebSocket socket, ILogger? logger = null)
     {
         ConnectionId = connectionId;
         _socket = socket;
@@ -35,14 +35,13 @@ public class SatelliteConnection
         _logger = logger;
         _logger?.LogInformation("SatelliteConnection {ConnectionId} created", connectionId);
     }
-    public static SatelliteConnection Create(string connectionId, WebSocket socket, ILogger<SatelliteConnection>? logger = null)
+    public static SatelliteConnection Create(string connectionId, WebSocket socket, ILogger? logger = null)
     {
         return new SatelliteConnection(connectionId, socket, logger);
     }
 
     public async Task RunAsync(CancellationToken token)
     {
-        _logger?.LogInformation("RunAsync start for connection {ConnectionId}", ConnectionId);
         try
         {
             while (_socket.State == WebSocketState.Open && !token.IsCancellationRequested)
@@ -53,7 +52,6 @@ public class SatelliteConnection
                 switch (result.MessageType)
                 {
                     case WebSocketMessageType.Close:
-                        _logger?.LogInformation("WebSocket close received for {ConnectionId}", ConnectionId);
                         await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", token);
                         break;
                     case WebSocketMessageType.Text:
@@ -70,17 +68,11 @@ public class SatelliteConnection
         }
         catch (OperationCanceledException)
         {
-            _logger?.LogInformation("RunAsync canceled for {ConnectionId}", ConnectionId);
-            throw;
+            _logger?.LogInformation("Connection canceled for {ConnectionId}", ConnectionId);
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "RunAsync error for {ConnectionId}", ConnectionId);
-            throw;
-        }
-        finally
-        {
-            _logger?.LogInformation("RunAsync exiting for connection {ConnectionId}", ConnectionId);
         }
     }
 

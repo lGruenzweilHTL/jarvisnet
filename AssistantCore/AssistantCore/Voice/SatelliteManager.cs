@@ -81,4 +81,23 @@ public class SatelliteManager
             cts.Cancel();
         }
     }
+
+    public void CancelAllPipelines()
+    {
+        _logger.LogInformation("Cancelling all active pipelines ({Count})", _activePipelines.Count);
+        foreach (var kv in _activePipelines)
+        {
+            if (_activePipelines.TryRemove(kv.Key, out var cts))
+            {
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error cancelling pipeline {ConnectionId}", kv.Key);
+                }
+            }
+        }
+    }
 }
