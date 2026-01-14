@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Linq;
+using System.Collections.Generic;
 using AssistantCore.Tools;
 using AssistantCore.Workers;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +13,17 @@ public class ToolCollectorTests
     private static ToolCollector CreateCollectorWithAssemblies(params Assembly[] assemblies)
     {
         var services = new ServiceCollection();
+        services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Debug).AddConsole());
+
+        // Register ToolCollector as a singleton and initialize with provided assemblies and logger
+        services.AddSingleton(provider =>
+        {
+            var logger = provider.GetService<ILogger<ToolCollector>>();
+            var tc = new ToolCollector(logger!);
+            tc.SetAssemblies(assemblies.ToList());
+            return tc;
+        });
+
         var sp = services.BuildServiceProvider();
         return sp.GetRequiredService<ToolCollector>();
     }
