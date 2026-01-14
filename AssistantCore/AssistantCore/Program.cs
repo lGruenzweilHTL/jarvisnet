@@ -3,8 +3,19 @@ using AssistantCore.Voice;
 using AssistantCore.Workers;
 using AssistantCore.Workers.Impl;
 using AssistantCore.Chat;
+using AssistantCore.Logging;
+using AssistantCore.Middleware;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure logging: console (default) and a simple file logger provider
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "assistant.log");
+var fileProvider = new FileLoggerProvider(logPath);
+builder.Services.AddSingleton<ILoggerProvider>(fileProvider);
+
 builder.Services.AddControllers();
 
 builder.Services.AddSingleton<ToolCollector>();
@@ -16,8 +27,14 @@ builder.Services.AddSingleton<ITtsWorker, DummyTts>();
 builder.Services.AddSingleton(provider => ChatManager.Create(TimeSpan.FromMinutes(30)));
 builder.Services.AddSingleton<SatelliteManager>();
 
-// Register system prompts from configuration
-var logger = LoggerFactory.Create(logging => logging.AddConsole()).CreateLogger("Startup");
+var app = builder.Build();
+
+// Register middleware for exception logging and request logging
+app.UseMiddleware<ExceptionLoggingMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
+
+// Register system prompts from configuration using the host logger
+var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 var promptsSection = builder.Configuration.GetSection("SystemPrompts");
 if (promptsSection.Exists())
 {
@@ -53,7 +70,6 @@ if (promptsSection.Exists())
     }
 }
 
-var app = builder.Build();
 
 // Configure WebSockets
 app.UseWebSockets(new WebSocketOptions
