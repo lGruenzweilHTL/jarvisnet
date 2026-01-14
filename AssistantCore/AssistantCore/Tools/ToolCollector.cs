@@ -43,6 +43,8 @@ public class ToolCollector(ILogger<ToolCollector> logger)
     {
         if (!isInitialized || refresh)
             GetToolMethods();
+        else 
+            logger?.LogInformation("Using cached tool methods; count={ToolCount}", toolMethods.Length);
 
         return toolMethods;
     }
@@ -50,6 +52,8 @@ public class ToolCollector(ILogger<ToolCollector> logger)
     {
         if (!isInitialized || refresh) 
             GetToolMethods();
+        else 
+            logger?.LogInformation("Using cached tool methods; count={ToolCount}", toolMethods.Length);
 
         return toolMethods
             .Where(t => t.Attribute.Speciality.HasFlag(speciality))

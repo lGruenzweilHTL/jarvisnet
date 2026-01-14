@@ -143,6 +143,11 @@ public class SatelliteConnection
                     await SendMessageAsync(sessionAck, token);
                     break;
                 case "audio.end":
+                    if (State == SatelliteConnectionState.SessionActive)
+                    {
+                        _logger?.LogWarning("Audio end received before any audio frames on connection {ConnectionId}", ConnectionId);
+                        State = SatelliteConnectionState.ReceivingAudio;
+                    }
                     if (State != SatelliteConnectionState.ReceivingAudio) return;
 
                     var audioEnd = JsonSerializer.Deserialize<SatelliteAudioEnd>(jsonStr, deserializeOpts);
