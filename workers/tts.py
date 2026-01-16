@@ -4,7 +4,7 @@ from os.path import basename
 from fastapi import FastAPI
 from piper import PiperVoice
 
-MODEL_PATH = "models/tts/de_DE-karlsson-low.onnx"
+MODEL_PATH = "models/en_US-lessac-low.onnx"
 voice = PiperVoice.load(MODEL_PATH)
 
 app = FastAPI()
@@ -22,7 +22,7 @@ async def infer(data: dict):
     result = {
         "request_id": req_id,
         "output": {
-            "data_base64": audio.decode("utf-8"),
+            "data_base64": audio.decode("ascii"),
             "sample_rate": info.sample_rate,
             "channels": info.num_speakers,
             "encoding": "pcm_s16le"
