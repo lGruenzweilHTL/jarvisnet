@@ -4,6 +4,7 @@ namespace AssistantCore.Workers;
 
 public sealed class WorkerRegistry
 {
+    private readonly TimeSpan _timeout = TimeSpan.FromMinutes(10); // ONLY FOR DEBUG; TODO: reduce timeout
     private readonly ConcurrentDictionary<string, WorkerDescriptor> _workers = new();
 
     public void Register(WorkerDescriptor worker)
@@ -28,7 +29,7 @@ public sealed class WorkerRegistry
 
         return _workers.Values
             .Where(w => w.Type == type)
-            .Where(w => (now - w.LastSeenUtc) < TimeSpan.FromSeconds(30))
+            .Where(w => (now - w.LastSeenUtc) < _timeout)
             .Where(w =>
                 speciality == null ||
                 w.Capabilities.Specialities?.Contains(speciality.Value) == true)

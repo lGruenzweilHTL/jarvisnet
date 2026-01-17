@@ -12,11 +12,7 @@ public class WorkerController(WorkerRegistry registry) : ControllerBase
     [HttpPost("register")]
     public IActionResult RegisterWorker([FromBody] WorkerRegisterRequest request)
     {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-        if (!Enum.TryParse<WorkerType>(request.WorkerType, out var type))
+        if (!Enum.TryParse<WorkerType>(request.WorkerType, ignoreCase: true, out var type))
             return BadRequest("Invalid worker type");
         
         var workerId = Guid.NewGuid().ToString();

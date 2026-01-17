@@ -1,4 +1,5 @@
 ﻿using AssistantCore.Workers;
+using AssistantCore.Workers.Dto;
 using AssistantCore.Workers.Dto.Impl;
 
 namespace CoreTests.Satellite.MockWorkers;

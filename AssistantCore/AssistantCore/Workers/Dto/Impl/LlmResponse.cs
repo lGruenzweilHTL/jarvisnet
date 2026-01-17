@@ -1,5 +1,21 @@
-﻿namespace AssistantCore.Workers.Dto.Impl;
+﻿using System.Text.Json.Serialization;
 
-public record LlmResponse(string RequestId, WorkerUsage Usage, LlmOutput Output, string? Error) 
-    : WorkerResponse<LlmOutput>(RequestId, Usage, Output, Error);
-public record LlmOutput(string Text);
+namespace AssistantCore.Workers.Dto.Impl;
+
+public record LlmResponse : WorkerResponse<LlmOutput>
+{
+    public LlmResponse(string requestId, WorkerUsage usage, LlmOutput output, string? error)
+        : base(requestId, usage, output, error)
+    {
+    }
+}
+
+public record LlmOutput
+{
+    [JsonPropertyName("text")] public string Text { get; init; }
+
+    public LlmOutput(string text)
+    {
+        Text = text;
+    }
+}

@@ -1,5 +1,25 @@
-﻿namespace AssistantCore.Workers.Dto.Impl;
+﻿using System.Text.Json.Serialization;
 
-public record SttResponse(string RequestId, SttOutput Output, WorkerUsage Usage, string? Error) 
-    : WorkerResponse<SttOutput>(RequestId, Usage, Output, Error);
-public record SttOutput(string Text, float Confidence, string Language);
+namespace AssistantCore.Workers.Dto.Impl;
+
+public record SttResponse : WorkerResponse<SttOutput>
+{
+    public SttResponse(string requestId, SttOutput output, WorkerUsage usage, string? error)
+        : base(requestId, usage, output, error)
+    {
+    }
+}
+
+public record SttOutput
+{
+    [JsonPropertyName("text")] public string Text { get; init; }
+    [JsonPropertyName("confidence")] public float Confidence { get; init; }
+    [JsonPropertyName("language")] public string Language { get; init; }
+
+    public SttOutput(string text, float confidence, string language)
+    {
+        Text = text;
+        Confidence = confidence;
+        Language = language;
+    }
+}
