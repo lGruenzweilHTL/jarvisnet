@@ -16,7 +16,7 @@ public class VoiceSessionOrchestrator(
     ILlmWorkerFactory llmFactory,
     ITtsWorker tts,
     ChatManager chat,
-    ILogger<SatelliteManager> parentLogger) // pass parent logger to correlate logs
+    ILogger<SatelliteManager> parentLogger)
 {
     private readonly ILogger _logger = parentLogger;
 

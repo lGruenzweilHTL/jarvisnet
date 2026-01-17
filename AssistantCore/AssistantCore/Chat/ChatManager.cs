@@ -40,7 +40,7 @@ public class ChatManager
 
     private void EnsureNotExpired()
     {
-        if (IsExpired()) return;
+        if (!IsExpired()) return;
         
         _chatEvents = [];
         _chatId = Guid.NewGuid();
@@ -50,7 +50,6 @@ public class ChatManager
     public ChatContext GetContext()
     {
         EnsureNotExpired();
-        // return a defensive copy of events to avoid external mutation
         return new ChatContext
         {
             ChatId = _chatId,
