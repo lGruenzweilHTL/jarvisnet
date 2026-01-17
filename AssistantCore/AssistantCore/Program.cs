@@ -84,39 +84,6 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 app.MapControllers();
-app.Map("/ws/satellite", (Action<IApplicationBuilder>)(appBuilder =>
-{
-    appBuilder.Run(async context =>
-    {
-        if (!context.WebSockets.IsWebSocketRequest)
-        {
-            context.Response.StatusCode = 400;
-            return;
-        }
-
-        var manager = context.RequestServices.GetRequiredService<SatelliteManager>();
-        var socket = await context.WebSockets.AcceptWebSocketAsync();
-        var connectionId = Guid.NewGuid().ToString();
-        var connLogger = context.RequestServices
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger($"SatelliteConnection-{connectionId}");
-        connLogger.LogInformation("Accepted new satellite connection {ConnectionId}", connectionId);
-        var connection = SatelliteConnection.Create(connectionId, socket, connLogger);
-        manager.RegisterConnection(connection);
-        try
-        {
-            // Link the HttpContext request cancellation with the host shutdown token so connection
-            // RunAsync exits promptly when the application is stopping.
-            var hostLifetime = context.RequestServices.GetRequiredService<IHostApplicationLifetime>();
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted, hostLifetime.ApplicationStopping);
-            await connection.RunAsync(linkedCts.Token);
-        }
-        finally
-        {
-            manager.UnregisterConnection(connection);
-        }
-    });
-}));
 
 // Ensure we cancel any active voice pipelines when host is shutting down
 app.Lifetime.ApplicationStopping.Register(() =>
