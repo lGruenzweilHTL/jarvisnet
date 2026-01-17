@@ -1,11 +1,13 @@
 ﻿using AssistantCore.Workers;
+using AssistantCore.Workers.Dto.Impl;
 
 namespace CoreTests.Satellite.MockWorkers;
 
-public class FakeSttWorker : ISttWorker
+public class FakeSttWorker : ISttWorkerClient
 {
-    public Task<string> TranscribeAsync(byte[] audioData, CancellationToken token)
+    public Task<SttResponse> InferAsync(WorkerDescriptor worker, SttRequest input, CancellationToken ct)
     {
-        return Task.FromResult("Turn on the kitchen lights.");
+        return Task.FromResult(new SttResponse("0", new SttOutput("Hello world", 1, "en"),
+            new WorkerUsage("fake-stt", 1), null));
     }
 }

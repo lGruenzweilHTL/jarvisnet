@@ -1,33 +1,41 @@
 ﻿using System.Collections.Concurrent;
 using AssistantCore.Workers;
 using AssistantCore.Chat;
+using AssistantCore.Workers.LoadBalancing;
 using Microsoft.Extensions.Logging;
 
 namespace AssistantCore.Voice;
 
 public class SatelliteManager
 {
-    private ISttWorker _stt;
-    private IRoutingWorker _router;
-    private ILlmWorkerFactory _llmFactory;
-    private ITtsWorker _tts;
+    private ISttWorkerClient _stt;
+    private IRoutingWorkerClient _router;
+    private ILlmWorkerClient _llm;
+    private ITtsWorkerClient _tts;
+    private WorkerRegistry _registry;
+    private ILoadBalancer _balancer;
     private ChatManager _chat;
     private readonly ILogger<SatelliteManager> _logger;
 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activePipelines = new();
 
     public SatelliteManager(
-        ISttWorker stt,
-        IRoutingWorker router,
-        ILlmWorkerFactory llmFactory,
-        ITtsWorker tts,
+        WorkerRegistry registry,
+        ILoadBalancer balancer,
+        ISttWorkerClient stt,
+        IRoutingWorkerClient router,
+        ILlmWorkerClient llm,
+        ITtsWorkerClient tts,
         ChatManager chat,
         ILogger<SatelliteManager> logger)
     {
         _stt = stt;
         _router = router;
-        _llmFactory = llmFactory;
+        _llm = llm;
         _tts = tts;
+        
+        _registry = registry;
+        _balancer = balancer;
         _chat = chat;
         _logger = logger;
     }
@@ -52,7 +60,14 @@ public class SatelliteManager
         var cts = new CancellationTokenSource();
         _activePipelines[connection.ConnectionId] = cts;
         
-        var orchestrator = new VoiceSessionOrchestrator(session, connection, _stt, _router, _llmFactory, _tts, _chat, _logger);
+        var orchestrator = new VoiceSessionOrchestrator(
+            session, 
+            connection, 
+            _stt, _router, _llm, _tts,
+            _chat,
+            _registry, 
+            _balancer, 
+            _logger);
 
         try
         {

@@ -1,5 +1,8 @@
 ﻿using AssistantCore.Chat;
+using AssistantCore.Tools.Dto;
 using AssistantCore.Workers;
+using AssistantCore.Workers.Dto.Impl;
+using AssistantCore.Workers.LoadBalancing;
 using Microsoft.Extensions.Logging;
 
 namespace AssistantCore.Voice;
@@ -11,11 +14,13 @@ namespace AssistantCore.Voice;
 public class VoiceSessionOrchestrator(
     SatelliteSession session,
     SatelliteConnection connection,
-    ISttWorker stt,
-    IRoutingWorker router,
-    ILlmWorkerFactory llmFactory,
-    ITtsWorker tts,
+    ISttWorkerClient stt,
+    IRoutingWorkerClient router,
+    ILlmWorkerClient llm,
+    ITtsWorkerClient tts,
     ChatManager chat,
+    WorkerRegistry registry,
+    ILoadBalancer balancer,
     ILogger<SatelliteManager> parentLogger)
 {
     private readonly ILogger _logger = parentLogger;
@@ -26,22 +31,17 @@ public class VoiceSessionOrchestrator(
         {
             _logger.LogInformation("Orchestrator starting for session {SessionId} on connection {ConnectionId}", session.SessionId, connection.ConnectionId);
 
-            var text = await stt.TranscribeAsync(session.AudioBytes, token);
+            var text = await InferSttAsync(session.AudioBytes, token);
             _logger.LogInformation("Transcription for session {SessionId}: {Text}", session.SessionId, text);
 
-            var speciality = await router.RouteAsync(text, token);
+            var speciality = await InferRouterAsync(text, token);
             _logger.LogInformation("Routed session {SessionId} to speciality {Speciality}", session.SessionId, speciality);
 
-            var llm = llmFactory.GetWorkerBySpeciality(speciality);
-            var context = chat.GetContext();
-            var input = new LlmInput(SystemPromptRegistry.GetPromptBySpeciality(speciality),
-                context.Events, [], text);
-
             _logger.LogInformation("Sending input to LLM for session {SessionId}", session.SessionId);
-            var response = await llm.GetResponseAsync(input, token);
+            var response = await InferLlmAsync(text, speciality, token);
             _logger.LogInformation("LLM response for session {SessionId}: {ResponsePreview}", session.SessionId, response?.Substring(0, Math.Min(200, response.Length)));
 
-            var audioBytes = await tts.SynthesizeAsync(response, token);
+            var audioBytes = await InferTtsAsync(response, token);
             _logger.LogInformation("Synthesized audio for session {SessionId}, {ByteCount} bytes", session.SessionId, audioBytes.Length);
 
             await connection.SendTtsAsync(audioBytes, token);
@@ -57,5 +57,50 @@ public class VoiceSessionOrchestrator(
             _logger.LogError(ex, "Error in orchestrator for session {SessionId} on connection {ConnectionId}", session.SessionId, connection.ConnectionId);
             throw;
         }
+    }
+
+    private async Task<string> InferSttAsync(byte[] audioBytes, CancellationToken token)
+    {
+        var candidates = registry.GetWorkers(WorkerType.Stt);
+        var worker = balancer.Select(candidates, "stt");
+        var input = new SttRequest("0", new SttInput(audioBytes, "pcm_s16le", 16000, 1),
+            new SttConfig(), new SttContext("dummy")); // TODO: fill in values dynamically
+        var result = await stt.InferAsync(worker, input, token);
+        return result.Output.Text;
+    }
+    private async Task<LlmSpeciality> InferRouterAsync(string text, CancellationToken token)
+    {
+        var candidates = registry.GetWorkers(WorkerType.Router);
+        var worker = balancer.Select(candidates, "router");
+        var specialities = Enum.GetNames<LlmSpeciality>();
+        var input = new RoutingRequest("0", new RoutingInput(text), new RoutingConfig(specialities),
+            new RoutingContext("dummy")); // TODO: fill in values dynamically
+        var result = await router.InferAsync(worker, input, token);
+
+        var specialityStr = result.Output.Speciality;
+        if (!Enum.TryParse<LlmSpeciality>(specialityStr, out var speciality))
+            speciality = LlmSpeciality.General;
+        
+        return speciality;
+    }
+    private async Task<string> InferLlmAsync(string text, LlmSpeciality speciality, CancellationToken token)
+    {
+        var candidates = registry.GetWorkers(WorkerType.Llm, speciality);
+        var key = "llm:" + speciality.ToString().ToLower();
+        var worker = balancer.Select(candidates, key);
+        // TODO: fill in values dynamically
+        var input = new LlmRequest("0", new LlmInput("What is 1+1?", [], chat.GetContext()), 
+            new LlmConfig(4096, 0.2f), new LlmContext("dummy"));
+        var result = await llm.InferAsync(worker, input, token);
+        return result.Output.Text;
+    }
+    private async Task<byte[]> InferTtsAsync(string text, CancellationToken token)
+    {
+        var candidates = registry.GetWorkers(WorkerType.Tts);
+        var worker = balancer.Select(candidates, "tts");
+        // TODO: fill in values dynamically
+        var input = new TtsRequest("0", new TtsInput(text), new TtsConfig(null!, 1f), new TtsContext());
+        var result = await tts.InferAsync(worker, input, token);
+        return result.Output.AudioData;
     }
 }

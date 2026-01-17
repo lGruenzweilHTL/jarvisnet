@@ -13,9 +13,9 @@ public class SatelliteWebsocketController(SatelliteManager manager,
     public async Task<IActionResult> RegisterSatellite()
     {
         var context = ControllerContext.HttpContext;
-        
+
         if (!context.WebSockets.IsWebSocketRequest)
-            return new BadRequestResult();
+            return BadRequest("WebSocket request expected");
         
         var socket = await context.WebSockets.AcceptWebSocketAsync();
         var connectionId = Guid.NewGuid().ToString();
@@ -32,6 +32,6 @@ public class SatelliteWebsocketController(SatelliteManager manager,
             manager.UnregisterConnection(connection);
         }
 
-        return new EmptyResult();
+        return Empty;
     }
 }

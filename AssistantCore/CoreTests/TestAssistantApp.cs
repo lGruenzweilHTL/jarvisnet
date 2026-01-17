@@ -1,4 +1,6 @@
 ﻿using AssistantCore.Workers;
+using AssistantCore.Workers.LoadBalancing;
+using CoreTests.Satellite;
 using CoreTests.Satellite.MockWorkers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -12,15 +14,17 @@ public sealed class TestAssistantApp
     {
         builder.ConfigureServices(services =>
         {
-            services.RemoveAll<ISttWorker>();
-            services.RemoveAll<IRoutingWorker>();
-            services.RemoveAll<ILlmWorker>();
-            services.RemoveAll<ITtsWorker>();
+            services.RemoveAll<ISttWorkerClient>();
+            services.RemoveAll<IRoutingWorkerClient>();
+            services.RemoveAll<ILlmWorkerClient>();
+            services.RemoveAll<ITtsWorkerClient>();
+            services.RemoveAll<ILoadBalancer>();
 
-            services.AddSingleton<ISttWorker, FakeSttWorker>();
-            services.AddSingleton<IRoutingWorker, FakeRoutingWorker>();
-            services.AddSingleton<ILlmWorker, FakeGeneralLlmWorker>();
-            services.AddSingleton<ITtsWorker, FakeTtsWorker>();
+            services.AddSingleton<ISttWorkerClient, FakeSttWorker>();
+            services.AddSingleton<IRoutingWorkerClient, FakeRoutingWorker>();
+            services.AddSingleton<ILlmWorkerClient, FakeGeneralLlmWorker>();
+            services.AddSingleton<ITtsWorkerClient, FakeTtsWorker>();
+            services.AddSingleton<ILoadBalancer, FakeLoadBalancer>();
         });
     }
 }
