@@ -1,9 +1,21 @@
 import base64
 import time
-
+import requests
 import numpy as np
 from fastapi import FastAPI
 from faster_whisper import WhisperModel
+
+def register(server_url):
+    payload = {
+        "type": "stt",
+        "endpoint": "http://localhost:8000"
+    }
+    response = requests.post(f"{server_url}/worker/register", json=payload)
+    response.raise_for_status()
+    data = response.json()
+    if not data.get("accepted", False):
+        raise Exception("Worker registration was not accepted")
+    print(f"Registered worker with ID: {data['worker_id']}")
 
 MODEL = "small"
 COMPUTE_TYPE = "int8"
@@ -11,6 +23,7 @@ BEAM_SIZE = 5
 whisper = WhisperModel(MODEL, device="cpu", compute_type=COMPUTE_TYPE)
 
 app = FastAPI()
+register("http://localhost:5264")
 
 @app.post("/infer")
 async def infer(data: dict):
