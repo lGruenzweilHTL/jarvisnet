@@ -12,7 +12,9 @@ public class WorkerController(WorkerRegistry registry) : ControllerBase
     [HttpPost("register")]
     public IActionResult RegisterWorker([FromBody] WorkerRegisterRequest request)
     {
-        if (!Enum.TryParse<WorkerType>(request.WorkerType, ignoreCase: true, out var type))
+        var typeStr = request.WorkerType.Split(':')[0];
+        var speciality = request.WorkerType.Contains(':') ? request.WorkerType.Split(':')[1] : null;
+        if (!Enum.TryParse<WorkerType>(typeStr, ignoreCase: true, out var type))
             return BadRequest("Invalid worker type");
         
         var workerId = Guid.NewGuid().ToString();
@@ -42,5 +44,26 @@ public class WorkerController(WorkerRegistry registry) : ControllerBase
     {
         registry.Heartbeat(request.WorkerId);
         return Ok();
+    }
+
+    [HttpGet("")]
+    public IActionResult GetAllWorkers()
+    {
+        return Ok(registry.GetAllWorkers());
+    }
+    
+    [HttpGet("alive")]
+    public IActionResult GetAliveWorkers()
+    {
+        return Ok(registry.GetAliveWorkers());
+    }
+    
+    [HttpGet("{workerId}")]
+    public IActionResult GetWorker(string workerId)
+    {
+        var worker = registry.GetWorker(workerId);
+        if (worker == null)
+            return NotFound("Worker not found");
+        return Ok(worker);
     }
 }

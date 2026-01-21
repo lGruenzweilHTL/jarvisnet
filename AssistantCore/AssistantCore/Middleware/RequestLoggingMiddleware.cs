@@ -23,13 +23,13 @@ public class RequestLoggingMiddleware
 
         using (_logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
         {
-            _logger.LogInformation("HTTP {Method} {Path} starting", context.Request.Method, context.Request.Path);
+            _logger.LogDebug("HTTP {Method} {Path} starting", context.Request.Method, context.Request.Path);
 
             try
             {
                 await _next(context);
                 sw.Stop();
-                _logger.LogInformation("HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms",
+                _logger.LogDebug("HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms",
                     context.Request.Method,
                     context.Request.Path,
                     context.Response.StatusCode,
