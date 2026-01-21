@@ -61,7 +61,7 @@ public class VoiceSessionOrchestrator(
 
     private async Task<string> InferSttAsync(byte[] audioBytes, CancellationToken token)
     {
-        var candidates = registry.GetValidWorkers(WorkerType.Stt);
+        var candidates = registry.GetAliveWorkersOfType(WorkerType.Stt);
         var worker = balancer.Select(candidates, "stt");
         var input = new SttRequest("0", new SttInput(audioBytes, "pcm_s16le", 16000, 1),
             new SttConfig(), new SttContext("dummy")); // TODO: fill in values dynamically
@@ -70,7 +70,7 @@ public class VoiceSessionOrchestrator(
     }
     private async Task<LlmSpeciality> InferRouterAsync(string text, CancellationToken token)
     {
-        var candidates = registry.GetValidWorkers(WorkerType.Router);
+        var candidates = registry.GetAliveWorkersOfType(WorkerType.Router);
         var worker = balancer.Select(candidates, "router");
         var specialities = Enum.GetNames<LlmSpeciality>();
         var input = new RoutingRequest("0", new RoutingInput(text), new RoutingConfig(specialities),
@@ -85,7 +85,7 @@ public class VoiceSessionOrchestrator(
     }
     private async Task<string> InferLlmAsync(string text, LlmSpeciality speciality, CancellationToken token)
     {
-        var candidates = registry.GetValidWorkers(WorkerType.Llm, speciality);
+        var candidates = registry.GetAliveWorkersOfType(WorkerType.Llm, speciality);
         var key = "llm:" + speciality.ToString().ToLower();
         var worker = balancer.Select(candidates, key);
         // TODO: fill in values dynamically
@@ -96,7 +96,7 @@ public class VoiceSessionOrchestrator(
     }
     private async Task<byte[]> InferTtsAsync(string text, CancellationToken token)
     {
-        var candidates = registry.GetValidWorkers(WorkerType.Tts);
+        var candidates = registry.GetAliveWorkersOfType(WorkerType.Tts);
         var worker = balancer.Select(candidates, "tts");
         // TODO: fill in values dynamically
         var input = new TtsRequest("0", new TtsInput(text), new TtsConfig(null!, 1f), new TtsContext());

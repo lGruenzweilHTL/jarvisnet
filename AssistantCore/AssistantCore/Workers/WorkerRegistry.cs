@@ -25,16 +25,17 @@ public sealed class WorkerRegistry(ILogger<WorkerRegistry> logger)
         }
     }
 
-    public IReadOnlyList<WorkerDescriptor> GetValidWorkers(
+    public IReadOnlyList<WorkerDescriptor> GetAliveWorkersOfType(
         WorkerType type,
         LlmSpeciality? speciality = null)
     {
         logger.LogDebug("Retrieving workers for type {WorkerType}", type);
 
         return (from w in GetAliveWorkers() 
-            where speciality == null || w.Capabilities.Specialities?.Contains(speciality.Value) == true
-            select w)
-            .ToList();
+                where w.Type == type
+                where speciality == null || w.Capabilities.Specialities?.Contains(speciality.Value) == true
+                select w)
+                .ToList();
     }
     
     public WorkerDescriptor? GetWorker(string workerId) =>
