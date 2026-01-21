@@ -1,7 +1,6 @@
 import time
-from pydantic import BaseModel
-from fastapi import FastAPI
 import ollama
+from pydantic import BaseModel
 
 MODEL = "llama3.2"
 
@@ -10,10 +9,7 @@ class RoutingDecision(BaseModel):
     confidence: float
     reason: str
 
-app = FastAPI()
-
-@app.post("/infer")
-async def infer(data: dict):
+async def infer_router(data: dict):
     start = time.perf_counter()
 
     req_id = data["request_id"]

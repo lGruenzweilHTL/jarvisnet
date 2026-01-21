@@ -1,16 +1,17 @@
 import base64
 import time
 from os.path import basename
-from fastapi import FastAPI
+from pathlib import Path
+
 from piper import PiperVoice
 
-MODEL_PATH = "models/en_US-lessac-low.onnx"
-voice = PiperVoice.load(MODEL_PATH)
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "de_DE-karlsson-low.onnx"
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 
-app = FastAPI()
+voice = PiperVoice.load(str(MODEL_PATH))
 
-@app.post("/infer")
-async def infer(data: dict):
+async def infer_tts(data: dict):
     start = time.perf_counter()
 
     req_id = data["request_id"]

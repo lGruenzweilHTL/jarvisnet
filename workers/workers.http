@@ -1,5 +1,5 @@
 ﻿### STT Worker
-POST localhost:8000/infer
+POST localhost:8001/infer
 Content-Type: application/json
 
 {
@@ -18,7 +18,7 @@ Content-Type: application/json
 }
 
 ### Routing Worker
-POST localhost:8000/infer
+POST localhost:8002/infer
 Content-Type: application/json
 
 {
