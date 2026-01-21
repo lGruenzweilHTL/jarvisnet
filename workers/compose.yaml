@@ -49,3 +49,20 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
+
+  llm:
+    image: worker-llm
+    #restart: unless-stopped
+    # Use host networking to access localhost services (TEMP)
+    network_mode: "host"
+    # Note: ports are ignored when using host networking, kept here for documentation
+    #ports:
+    #  - "8002:8002"
+    environment:
+      CORE_URL: "http://localhost:5264"
+      PORT: 8003
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
