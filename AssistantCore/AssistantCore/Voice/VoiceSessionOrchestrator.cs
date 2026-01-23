@@ -1,10 +1,8 @@
 ﻿using AssistantCore.Chat;
 using AssistantCore.Tools;
-using AssistantCore.Tools.Dto;
 using AssistantCore.Workers;
 using AssistantCore.Workers.Dto.Impl;
 using AssistantCore.Workers.LoadBalancing;
-using Microsoft.Extensions.Logging;
 
 namespace AssistantCore.Voice;
 
@@ -66,7 +64,7 @@ public class VoiceSessionOrchestrator(
         var candidates = registry.GetAliveWorkersOfType(WorkerType.Stt);
         var worker = balancer.Select(candidates, "stt");
         var input = new SttRequest("0", new SttInput(audioBytes, "pcm_s16le", 16000, 1),
-            new SttConfig(), new SttContext("dummy")); // TODO: fill in values dynamically
+            new SttConfig(), new SttContext(connection.SatelliteInfo?.Area ?? "unknown")); // TODO: fill in values dynamically
         var result = await stt.InferAsync(worker, input, token);
         return result.Output.Text;
     }
@@ -76,7 +74,7 @@ public class VoiceSessionOrchestrator(
         var worker = balancer.Select(candidates, "router");
         var specialities = Enum.GetNames<LlmSpeciality>();
         var input = new RoutingRequest("0", new RoutingInput(text), new RoutingConfig(specialities),
-            new RoutingContext("dummy")); // TODO: fill in values dynamically
+            new RoutingContext(connection.SatelliteInfo?.Area ?? "unknown")); // TODO: fill in values dynamically
         var result = await router.InferAsync(worker, input, token);
 
         var specialityStr = result.Output.Speciality;
@@ -94,7 +92,7 @@ public class VoiceSessionOrchestrator(
             .ToArray();
         // TODO: fill in values dynamically
         var input = new LlmRequest("0", new LlmInput(text, tools, chat.GetContext()), 
-            new LlmConfig(4096, 0.2f), new LlmContext("dummy"));
+            new LlmConfig(4096, 0.2f), new LlmContext(connection.SatelliteInfo?.Area ?? "unknown"));
         var result = await llm.InferAsync(worker, input, token);
         return result.Output.Text;
     }
