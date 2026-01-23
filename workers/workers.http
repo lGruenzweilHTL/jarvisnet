@@ -52,19 +52,57 @@ Content-Type: application/json
 POST localhost:8003/infer
 Content-Type: application/json
 
+
 {
-  "request_id": "uuid-testing",
+  "request_id": "0",
   "input": {
-    "text": "Turn on the kitchen lights",
-    "system": "You are a helpful home automation assistant.",
+    "prompt": "What is that number squared?",
+    "tools":[
+      {
+        "name": "get_weather",
+        "description": "Get the current weather for a given location.",
+        "parameters":
+        [
+          {
+            "name": "location",
+            "description": "The City to get the weather for",
+            "type": "string",
+            "enum": null,
+            "required": true,
+            "default": null
+          },
+          {
+            "name": "unit",
+            "description": "The unit of temperature (Celsius or Fahrenheit)",
+            "type": "string",
+            "enum": ["Celsius", "Fahrenheit"],
+            "required": true,
+            "default": null
+          }
+        ]
+      }
+    ],
+    "chat_context": {
+      "chat_id": "c891507b-82b2-4832-b26d-44a9e12bab99",
+      "events": [
+        {
+          "$type": "user",
+          "text": "What is 1\u002B1?",
+          "timestamp": "2026-01-23T08:42:47.5451626Z"
+        },
+        {
+          "$type": "assistant",
+          "text": "The answer is 2.",
+          "timestamp": "2026-01-23T08:42:47.5452438Z"
+        }
+      ]
+    }
   },
   "config": {
-    "model": "llama3.2",
-    "temperature": 0.7,
-    "max_tokens": 150
+    "max_tokens": 4096,
+    "temperature": 0.2
   },
   "context": {
-    "mic_id": "kitchen_satellite",
-    "area": "kitchen"
+    "location": "dummy"
   }
 }
