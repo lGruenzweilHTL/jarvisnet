@@ -1,4 +1,5 @@
 ﻿using AssistantCore.Chat;
+using AssistantCore.Tools;
 using AssistantCore.Tools.Dto;
 using AssistantCore.Workers;
 using AssistantCore.Workers.Dto.Impl;
@@ -21,6 +22,7 @@ public class VoiceSessionOrchestrator(
     ChatManager chat,
     WorkerRegistry registry,
     ILoadBalancer balancer,
+    ToolCollector collector,
     ILogger<SatelliteManager> parentLogger)
 {
     private readonly ILogger _logger = parentLogger;
@@ -86,10 +88,12 @@ public class VoiceSessionOrchestrator(
     private async Task<string> InferLlmAsync(string text, LlmSpeciality speciality, CancellationToken token)
     {
         var candidates = registry.GetAliveWorkersOfType(WorkerType.Llm, speciality);
-        var key = "llm:" + speciality.ToString().ToLower();
-        var worker = balancer.Select(candidates, key);
+        var worker = balancer.Select(candidates, "llm");
+        var tools = collector.GetToolsBySpeciality(speciality)
+            .Select(t => t.ToDto())
+            .ToArray();
         // TODO: fill in values dynamically
-        var input = new LlmRequest("0", new LlmInput("What is 1+1?", [], chat.GetContext()), 
+        var input = new LlmRequest("0", new LlmInput(text, tools, chat.GetContext()), 
             new LlmConfig(4096, 0.2f), new LlmContext("dummy"));
         var result = await llm.InferAsync(worker, input, token);
         return result.Output.Text;

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using AssistantCore.Workers;
 using AssistantCore.Chat;
+using AssistantCore.Tools;
 using AssistantCore.Workers.LoadBalancing;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,7 @@ public class SatelliteManager
     private WorkerRegistry _registry;
     private ILoadBalancer _balancer;
     private ChatManager _chat;
+    private ToolCollector _collector;
     private readonly ILogger<SatelliteManager> _logger;
 
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activePipelines = new();
@@ -27,6 +29,7 @@ public class SatelliteManager
         ILlmWorkerClient llm,
         ITtsWorkerClient tts,
         ChatManager chat,
+        ToolCollector collector,
         ILogger<SatelliteManager> logger)
     {
         _stt = stt;
@@ -38,6 +41,8 @@ public class SatelliteManager
         _balancer = balancer;
         _chat = chat;
         _logger = logger;
+
+        _collector = collector;
     }
 
     public void RegisterConnection(SatelliteConnection connection)
@@ -67,6 +72,7 @@ public class SatelliteManager
             _chat,
             _registry, 
             _balancer, 
+            _collector,
             _logger);
 
         try

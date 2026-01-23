@@ -14,6 +14,6 @@ public struct ToolDto
     [JsonPropertyName("parameters")]
     public ToolParamDto[] Parameters { get; set; }
     
-    [JsonPropertyName("speciality")]
+    [JsonIgnore]
     public LlmSpeciality Speciality { get; set; }
 }
