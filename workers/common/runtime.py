@@ -35,10 +35,7 @@ class WorkerRuntime:
 
     def run(self):
         port = os.getenv("PORT", "8000")
-        register_with_core(
-            worker_type=self.worker_type,
-            speciality=self.speciality
-        )
+        register_with_core(self.worker_type)
         # start heartbeat in background thread so it won't block the server
         self._start_hb_thread()
         uvicorn.run(self.app, host="0.0.0.0", port=int(port), log_level="info")
