@@ -5,8 +5,10 @@ WORKDIR /opt/assistant
 
 RUN pip install --upgrade pip
 
+# Optimize layer caching so that dependencies are only reinstalled if pyproject.toml changes
+COPY ./pyproject.toml ./llm/
+RUN pip install --no-cache-dir ./llm/
 COPY ./ ./llm/
-RUN pip install --no-cache-dir llm/
 
 EXPOSE $PORT
 

@@ -1,10 +1,9 @@
-# ---- Build stage ----
-FROM python:3.11-slim AS builder
-ENV PORT=8000
-ENV CORE_URL=http://localhost:3000
+FROM python:3.11-slim
 
 WORKDIR /opt/assistant
-
-COPY ./ ./common/
 RUN pip install --upgrade pip
+
+# Optimize layer caching so that dependencies are only reinstalled if pyproject.toml changes
+COPY ./pyproject.toml ./common/
 RUN pip install --no-cache-dir ./common/
+COPY ./ ./common/

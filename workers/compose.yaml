@@ -1,14 +1,18 @@
 services:
+  common:
+    build: ./common
+    image: workers-common # Build to a named image for reuse
+
   tts:
-    image: worker-tts
+    build: ./tts
+    depends_on:
+      - common
     #restart: unless-stopped
-    # Use host networking to access localhost services (TEMP)
-    network_mode: "host"
-    # Note: ports are ignored when using host networking, kept here for documentation
-    #ports:
-    #  - "8000:8000"
+    ports:
+      - "8000:8000"
     environment:
-      CORE_URL: "http://localhost:5264"
+      CORE_URL: "http://host.docker.internal:5264"
+      WORKER_ENDPOINT: "http://localhost:8000"
       PORT: 8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -17,15 +21,15 @@ services:
       retries: 10
 
   stt:
-    image: worker-stt
+    build: ./stt
+    depends_on:
+      - common
     #restart: unless-stopped
-    # Use host networking to access localhost services (TEMP)
-    network_mode: "host"
-    # Note: ports are ignored when using host networking, kept here for documentation
-    #ports:
-    #  - "8001:8001"
+    ports:
+      - "8001:8001"
     environment:
-      CORE_URL: "http://localhost:5264"
+      CORE_URL: "http://host.docker.internal:5264"
+      WORKER_ENDPOINT: "http://localhost:8001"
       PORT: 8001
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
@@ -34,15 +38,15 @@ services:
       retries: 10
 
   router:
-    image: worker-router
+    build: ./router
+    depends_on:
+      - common
     #restart: unless-stopped
-    # Use host networking to access localhost services (TEMP)
-    network_mode: "host"
-    # Note: ports are ignored when using host networking, kept here for documentation
-    #ports:
-    #  - "8002:8002"
+    ports:
+      - "8002:8002"
     environment:
-      CORE_URL: "http://localhost:5264"
+      CORE_URL: "http://host.docker.internal:5264"
+      WORKER_ENDPOINT: "http://localhost:8002"
       PORT: 8002
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
@@ -51,15 +55,15 @@ services:
       retries: 10
 
   llm:
-    image: worker-llm
+    build: ./llm
+    depends_on:
+      - common
     #restart: unless-stopped
-    # Use host networking to access localhost services (TEMP)
-    network_mode: "host"
-    # Note: ports are ignored when using host networking, kept here for documentation
-    #ports:
-    #  - "8002:8002"
+    ports:
+      - "8003:8003"
     environment:
-      CORE_URL: "http://localhost:5264"
+      CORE_URL: "http://host.docker.internal:5264"
+      WORKER_ENDPOINT: "http://localhost:8003"
       PORT: 8003
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
