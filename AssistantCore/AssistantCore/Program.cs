@@ -16,8 +16,8 @@ Log.Logger = new LoggerConfiguration()
     // File sink as compact JSON (easy to parse)
     .WriteTo.File(new CompactJsonFormatter(), path: "logs/assistantcore-.json",
         rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
-    // Seq sink for searchable dashboard (docker run --name seq -d -e ACCEPT_EULA=Y -p 5341:80 datalust/seq:latest)
-    .WriteTo.Seq("http://localhost:5341", apiKey: null, restrictedToMinimumLevel: LogEventLevel.Debug)
+    // Implies seq is running in a container named "seq" on the same Docker network
+    .WriteTo.Seq("http://seq:5341", apiKey: null, restrictedToMinimumLevel: LogEventLevel.Debug)
     .WriteTo.Console()
     .CreateLogger();
 

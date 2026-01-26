@@ -1,0 +1,17 @@
+services:
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - 5341:80
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+        
+  assistant-core:
+    build:
+      context: .
+      dockerfile: AssistantCore/Dockerfile
+    ports:
+      - 5264:5264
+    depends_on:
+      - seq
