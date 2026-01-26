@@ -9,17 +9,36 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Debug()
+bool useSeq = Environment.GetEnvironmentVariable("USE_SEQ") == "true";
+string seqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341";
+bool useFileLogging = Environment.GetEnvironmentVariable("USE_FILE_LOGGING") == "true";
+string logDirectory = Environment.GetEnvironmentVariable("LOG_DIRECTORY") ?? "logs";
+string logLevel = Environment.GetEnvironmentVariable("MINIMUM_LOG_LEVEL") ?? "Information";
+
+if (!Enum.TryParse<LogEventLevel>(logLevel, true, out var minimumLevel))
+    minimumLevel = LogEventLevel.Information;
+
+var loggerConfig = new LoggerConfiguration()
+    .MinimumLevel.Is(minimumLevel)
     .Enrich.FromLogContext() // captures scoped properties
-    .Enrich.WithProperty("Service", "AssistantCore")
-    // File sink as compact JSON (easy to parse)
-    .WriteTo.File(new CompactJsonFormatter(), path: "logs/assistantcore-.json",
-        rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
-    // Implies seq is running in a container named "seq" on the same Docker network
-    .WriteTo.Seq("http://seq:5341", apiKey: null, restrictedToMinimumLevel: LogEventLevel.Debug)
-    .WriteTo.Console()
-    .CreateLogger();
+    .Enrich.WithProperty("Service", "AssistantCore");
+
+// File sink as compact JSON (easy to parse)
+if (useFileLogging)
+{
+    Directory.CreateDirectory(logDirectory);
+    loggerConfig = loggerConfig.WriteTo.File(new CompactJsonFormatter(), path: $"{logDirectory}/assistantcore-.json",
+        rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14);
+}
+
+// Seq sink (when enabled)
+if (useSeq)
+    loggerConfig = loggerConfig.WriteTo.Seq(seqUrl, apiKey: null, restrictedToMinimumLevel: minimumLevel);
+
+
+loggerConfig = loggerConfig.WriteTo.Console();
+
+Log.Logger = loggerConfig.CreateLogger();
 
 try
 {

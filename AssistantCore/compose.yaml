@@ -13,5 +13,11 @@ services:
       dockerfile: AssistantCore/Dockerfile
     ports:
       - 5264:5264
+    environment:
+      - USE_SEQ=true
+      - USE_FILE_LOGGING=true
+      - SEQ_URL=http://seq:5341
+      - LOG_DIRECTORY=logs
+      - MINIMUM_LOG_LEVEL=Debug
     depends_on:
       - seq

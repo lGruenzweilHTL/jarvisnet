@@ -17,6 +17,11 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./AssistantCore.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
+ENV USE_SEQ=false
+ENV SEQ_URL=http://localhost:5341
+ENV USE_FILE_LOGGING=false
+ENV LOG_DIRECTORY=/logs
+ENV MINIMUM_LOG_LEVEL=Information
 WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 5264
