@@ -1,5 +1,5 @@
 from common.runtime import WorkerRuntime
-from app import infer_router
+from router.app import infer_router
 
 runtime = WorkerRuntime(
     worker_type="router",

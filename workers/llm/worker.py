@@ -1,5 +1,5 @@
 from common.runtime import WorkerRuntime
-from app import infer_llm
+from llm.app import infer_llm
 
 runtime = WorkerRuntime(
     worker_type="llm",

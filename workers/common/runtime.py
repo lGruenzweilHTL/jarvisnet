@@ -1,8 +1,8 @@
 import os
 from fastapi import FastAPI
 import asyncio
-from registration import register_with_core, start_heartbeat
-from health import add_health_endpoint
+from common.registration import register_with_core, start_heartbeat
+from common.health import add_health_endpoint
 import uvicorn
 
 class WorkerRuntime:
