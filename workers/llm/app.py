@@ -28,6 +28,8 @@ async def infer_llm(data: dict):
     tools = convert_tools(tool_schemas)
 
     # Run Ollama Chat
+    if not check_model_exists(model):
+        ollama.pull(model)
     response = ollama.chat(
         model=model,
         messages=messages,
@@ -96,11 +98,6 @@ def build_messages(user_prompt, chat_context, context):
 
     return messages
 
-
-# ---------------------------
-# Convert Payload Tools → Ollama Tool Schema
-# ---------------------------
-
 def convert_tools(tool_schemas):
     tools = []
 
@@ -128,3 +125,7 @@ def convert_tools(tool_schemas):
         })
 
     return tools
+
+def check_model_exists(model):
+    res = ollama.list()
+    return model in [m["model"] for m in res.models]

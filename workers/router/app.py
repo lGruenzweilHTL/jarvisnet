@@ -3,6 +3,7 @@ import ollama
 from pydantic import BaseModel
 
 MODEL = "llama3.2"
+ollama.pull(MODEL)
 
 class RoutingDecision(BaseModel):
     speciality: str

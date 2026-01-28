@@ -4,7 +4,6 @@ import requests
 from typing import Optional, Dict, Any
 
 CORE_URL = os.getenv("CORE_URL", "http://core")
-PORT = os.getenv("PORT", "8000")
 worker_id: Optional[str] = None
 
 def _attempt_register(payload: Dict[str, Any]) -> str:
@@ -19,7 +18,7 @@ def _attempt_register(payload: Dict[str, Any]) -> str:
 def register_with_core(worker_type: str) -> None:
     worker_endpoint = os.getenv("WORKER_ENDPOINT")
     if not worker_endpoint:
-        worker_endpoint = "http://localhost:" + PORT
+        worker_endpoint = "http://localhost:" + os.getenv("PORT", "8000")
     else:
         # normalize by removing trailing slash
         worker_endpoint = worker_endpoint.rstrip("/")
