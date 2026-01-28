@@ -9,10 +9,9 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 
-bool useSeq = Environment.GetEnvironmentVariable("USE_SEQ") == "true";
-string seqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341";
+string? seqUrl = Environment.GetEnvironmentVariable("SEQ_URL");
+bool useSeq = !string.IsNullOrEmpty(seqUrl);
 bool useFileLogging = Environment.GetEnvironmentVariable("USE_FILE_LOGGING") == "true";
-string logDirectory = Environment.GetEnvironmentVariable("LOG_DIRECTORY") ?? "logs";
 string logLevel = Environment.GetEnvironmentVariable("MINIMUM_LOG_LEVEL") ?? "Information";
 
 if (!Enum.TryParse<LogEventLevel>(logLevel, true, out var minimumLevel))
@@ -26,14 +25,12 @@ var loggerConfig = new LoggerConfiguration()
 // File sink as compact JSON (easy to parse)
 if (useFileLogging)
 {
-    Directory.CreateDirectory(logDirectory);
-    loggerConfig = loggerConfig.WriteTo.File(new CompactJsonFormatter(), path: $"{logDirectory}/assistantcore-.json",
+    loggerConfig = loggerConfig.WriteTo.File(new CompactJsonFormatter(), path: "logs/assistantcore-.json",
         rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14);
 }
 
-// Seq sink (when enabled)
 if (useSeq)
-    loggerConfig = loggerConfig.WriteTo.Seq(seqUrl, apiKey: null, restrictedToMinimumLevel: minimumLevel);
+    loggerConfig = loggerConfig.WriteTo.Seq(seqUrl!, apiKey: null, restrictedToMinimumLevel: minimumLevel);
 
 
 loggerConfig = loggerConfig.WriteTo.Console();

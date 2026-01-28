@@ -6,18 +6,24 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    networks:
+      - aiassistant
         
-  assistant-core:
+  core:
     build:
       context: .
       dockerfile: AssistantCore/Dockerfile
     ports:
       - 5264:5264
     environment:
-      - USE_SEQ=true
-      - USE_FILE_LOGGING=true
+      - USE_FILE_LOGGING=false
       - SEQ_URL=http://seq:5341
-      - LOG_DIRECTORY=logs
       - MINIMUM_LOG_LEVEL=Debug
+    networks:
+      - aiassistant
     depends_on:
       - seq
+
+networks:
+  aiassistant:
+    external: true
