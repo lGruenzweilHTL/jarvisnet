@@ -29,6 +29,7 @@ async def infer_llm(data: dict):
 
     # Run Ollama Chat
     if not check_model_exists(model):
+        print(f"Model {model} not found. Pulling...")
         ollama.pull(model)
     response = ollama.chat(
         model=model,
